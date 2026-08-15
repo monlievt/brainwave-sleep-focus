@@ -61,6 +61,10 @@ class MainActivity : ComponentActivity() {
     try {
       val viewModel = androidx.lifecycle.ViewModelProvider(this)[MainScreenViewModel::class.java]
       if (!viewModel.isPremium.value) {
+        if (com.monliev.brainwave.audio.playback.AdMobManager.isNavigatingExternally) {
+          com.monliev.brainwave.audio.playback.AdMobManager.isNavigatingExternally = false
+          return
+        }
         val now = System.currentTimeMillis()
         val elapsed = now - com.monliev.brainwave.audio.playback.AdMobManager.lastFullScreenAdDismissedTime
         if (elapsed > 1000) {

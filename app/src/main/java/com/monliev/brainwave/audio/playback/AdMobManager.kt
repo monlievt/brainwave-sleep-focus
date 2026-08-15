@@ -33,6 +33,9 @@ object AdMobManager {
     // Timestamp to track when a full screen ad was last closed, to prevent App Open from showing immediately on MainActivity resume
     var lastFullScreenAdDismissedTime: Long = 0L
 
+    // Flag to track when user navigates externally (e.g. sharing, rating, email support, native ad clicks) to prevent app open ad on return
+    @Volatile var isNavigatingExternally: Boolean = false
+
     // Frequency capping for Interstitial Ads to prevent excessive showing (3-minute cooldown)
     private var lastInterstitialShowTime: Long = 0L
     private const val INTERSTITIAL_COOLDOWN_MS = 3 * 60 * 1000

@@ -2,6 +2,11 @@ package com.monliev.brainwave.ui.main
 
 import android.content.Intent
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -579,6 +584,7 @@ fun MainTabsScreen(
                             colors = colors,
                             onClick = {
                                 scope.launch { drawerState.close() }
+                                com.monliev.brainwave.audio.playback.AdMobManager.isNavigatingExternally = true
                                 val shareIntent = Intent(Intent.ACTION_SEND).apply {
                                     type = "text/plain"
                                     putExtra(Intent.EXTRA_SUBJECT, "Brainwave — Sleep & Focus")
@@ -595,6 +601,7 @@ fun MainTabsScreen(
                             colors = colors,
                             onClick = {
                                 scope.launch { drawerState.close() }
+                                com.monliev.brainwave.audio.playback.AdMobManager.isNavigatingExternally = true
                                 val rateIntent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse("market://details?id=com.monliev.brainwave"))
                                 try {
                                     context.startActivity(rateIntent)
@@ -611,6 +618,7 @@ fun MainTabsScreen(
                             colors = colors,
                             onClick = {
                                 scope.launch { drawerState.close() }
+                                com.monliev.brainwave.audio.playback.AdMobManager.isNavigatingExternally = true
                                 val emailIntent = Intent(Intent.ACTION_SENDTO, android.net.Uri.parse("mailto:support@monliev.com")).apply {
                                     putExtra(Intent.EXTRA_SUBJECT, "Brainwave Feedback")
                                 }
@@ -2225,6 +2233,17 @@ fun PlayerScreen(
     var showVolumeDialog by remember { mutableStateOf(false) }
     var showBreathingDialog by remember { mutableStateOf(false) }
 
+    var showHeadphoneToast by remember { mutableStateOf(false) }
+    androidx.compose.runtime.LaunchedEffect(headphonesConnected) {
+        if (!headphonesConnected) {
+            showHeadphoneToast = true
+            kotlinx.coroutines.delay(4000)
+            showHeadphoneToast = false
+        } else {
+            showHeadphoneToast = false
+        }
+    }
+
     val activeBeatHz = remember(preset) {
         preset.steps.firstOrNull()?.beat_frequency_hz
             ?: preset.steps.firstOrNull()?.start_beat_frequency_hz
@@ -2245,16 +2264,19 @@ fun PlayerScreen(
         // allowing the ad card to show fully on one screen without scrolling.
         // Users can easily go back using the system/gesture Back button.
     ) { paddingValues ->
-        // Wrapped content inside a scrollable Column with compressed spacing
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(horizontal = 24.dp, vertical = 12.dp)
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(10.dp) // Merapatkan spasi vertikal antar elemen
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 24.dp, vertical = 12.dp)
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(10.dp) // Merapatkan spasi vertikal antar elemen
+            ) {
             // Header Preset Info
             Row(
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
@@ -2367,28 +2389,7 @@ fun PlayerScreen(
                 }
             }
 
-            // Headphone Warning Bar
-            if (!headphonesConnected) {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = ColorAccentSpirit.copy(alpha = 0.15f)),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier.padding(10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Default.Info, contentDescription = null, tint = ColorAccentSpirit, modifier = Modifier.size(20.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "For best results, please use headphones 🎧",
-                            color = ColorAccentSpirit,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-            }
+            // Headphone Warning Bar removed dynamically to show as a floating toast overlay
 
             // Remaining Duration Row
             Row(
@@ -2597,8 +2598,50 @@ fun PlayerScreen(
                     }
                 }
             }
+        } // Column ends
+
+        // Floating Headphone Warning overlay
+        AnimatedVisibility(
+            visible = showHeadphoneToast,
+            enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
+            exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut(),
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 16.dp)
+                .padding(horizontal = 24.dp)
+        ) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = colors.card),
+                shape = RoundedCornerShape(12.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(1.dp, ColorAccentSpirit.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                    .clickable { showHeadphoneToast = false } // Tap to dismiss
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = null,
+                        tint = ColorAccentSpirit,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = "For best results, please use headphones 🎧",
+                        color = colors.text,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
         }
-    }
+    } // Box ends
+} // Scaffold lambda ends
 
     if (showTimerSheet) {
         SleepTimerBottomSheet(
@@ -3089,6 +3132,11 @@ fun AdMobNativeAd(
             .withAdListener(object : com.google.android.gms.ads.AdListener() {
                 override fun onAdFailedToLoad(error: com.google.android.gms.ads.LoadAdError) {
                     // Fail silently
+                }
+
+                override fun onAdOpened() {
+                    super.onAdOpened()
+                    com.monliev.brainwave.audio.playback.AdMobManager.isNavigatingExternally = true
                 }
             })
             .build()
