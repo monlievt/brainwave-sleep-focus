@@ -46,6 +46,12 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
     val isDarkMode = MutableStateFlow(true)
     val isPremium = MutableStateFlow(false)
     val isSchedulerUnlockedTemporarily = MutableStateFlow(false)
+
+    // Mixer volumes state flows
+    val volumeTone = MutableStateFlow(1.0f)
+    val volumeWhite = MutableStateFlow(0.0f)
+    val volumePink = MutableStateFlow(0.0f)
+    val volumeBrown = MutableStateFlow(0.0f)
     
     // Deep Link Flow
     val pendingDeepLinkPreset = MutableStateFlow<String?>(null)
@@ -147,6 +153,17 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     /**
+     * Updates the individual channel levels in the UI and pushes them to the active service.
+     */
+    fun updateMixerLevels(tone: Float, white: Float, pink: Float, brown: Float) {
+        volumeTone.value = tone
+        volumeWhite.value = white
+        volumePink.value = pink
+        volumeBrown.value = brown
+        boundService?.setMixerLevels(tone, white, pink, brown)
+    }
+
+    /**
      * Handles dynamic deep link parsing and triggers the flow if valid.
      */
     fun handleDeepLinkUri(uriString: String?) {
@@ -176,6 +193,21 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
      * Starts playing the specified preset by sending a start Intent to the foreground service.
      */
     fun startPlayback(preset: Preset) {
+        // Reset and initialize default noise levels for the UI
+        volumeTone.value = 1.0f
+        volumeWhite.value = 0.0f
+        volumePink.value = 0.0f
+        volumeBrown.value = 0.0f
+        val defaultNoiseType = preset.background_noise?.type
+        val defaultNoiseAmp = preset.background_noise?.amplitude ?: 0.0f
+        if (!defaultNoiseType.isNullOrEmpty() && !defaultNoiseType.equals("none", ignoreCase = true)) {
+            when (defaultNoiseType.lowercase()) {
+                "white" -> volumeWhite.value = defaultNoiseAmp
+                "pink" -> volumePink.value = defaultNoiseAmp
+                "brown" -> volumeBrown.value = defaultNoiseAmp
+            }
+        }
+
         val app = getApplication<Application>()
         val json = Json.encodeToString(Preset.serializer(), preset)
         val intent = Intent(app, AudioEngineService::class.java).apply {

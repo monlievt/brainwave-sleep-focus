@@ -49,6 +49,11 @@ class AudioEngineService : Service(), AudioTrackManager.OnCompletionListener {
     private var noiseType: String? = null
     private var noiseAmplitude: Float = 0.0f
 
+    private var volTone: Float = 1.0f
+    private var volWhite: Float = 0.0f
+    private var volPink: Float = 0.0f
+    private var volBrown: Float = 0.0f
+
     // Sleep Timer coroutine fields
     private val serviceJob = SupervisorJob()
     private val serviceScope = CoroutineScope(Dispatchers.Main + serviceJob)
@@ -163,7 +168,21 @@ class AudioEngineService : Service(), AudioTrackManager.OnCompletionListener {
 
         acquireWakeLock()
         audioTrackManager.setMasterVolume(masterVolume)
-        audioTrackManager.setNoise(noiseType, noiseAmplitude)
+        // Set default preset noise configuration to individual mixer levels
+        volTone = 1.0f
+        volWhite = 0.0f
+        volPink = 0.0f
+        volBrown = 0.0f
+        val activeNoise = noiseType
+        if (!activeNoise.isNullOrEmpty() && !activeNoise.equals("none", ignoreCase = true)) {
+            val amp = noiseAmplitude.coerceIn(0.0f, 1.0f)
+            when (activeNoise.lowercase()) {
+                "white" -> volWhite = amp
+                "pink" -> volPink = amp
+                "brown" -> volBrown = amp
+            }
+        }
+        audioTrackManager.setMixerLevels(volTone, volWhite, volPink, volBrown)
         audioTrackManager.play(scheduler, noiseType, noiseAmplitude)
 
         updateNotification()
@@ -229,7 +248,27 @@ class AudioEngineService : Service(), AudioTrackManager.OnCompletionListener {
     fun setNoise(type: String?, amplitude: Float) {
         noiseType = type
         noiseAmplitude = amplitude
-        audioTrackManager.setNoise(type, amplitude)
+        volTone = 1.0f
+        volWhite = 0.0f
+        volPink = 0.0f
+        volBrown = 0.0f
+        if (!type.isNullOrEmpty() && !type.equals("none", ignoreCase = true)) {
+            val amp = amplitude.coerceIn(0.0f, 1.0f)
+            when (type.lowercase()) {
+                "white" -> volWhite = amp
+                "pink" -> volPink = amp
+                "brown" -> volBrown = amp
+            }
+        }
+        audioTrackManager.setMixerLevels(volTone, volWhite, volPink, volBrown)
+    }
+
+    fun setMixerLevels(tone: Float, white: Float, pink: Float, brown: Float) {
+        volTone = tone
+        volWhite = white
+        volPink = pink
+        volBrown = brown
+        audioTrackManager.setMixerLevels(tone, white, pink, brown)
     }
 
     fun getPlayingPreset(): Preset? = currentPreset

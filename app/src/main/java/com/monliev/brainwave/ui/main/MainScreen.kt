@@ -1,6 +1,7 @@
 package com.monliev.brainwave.ui.main
 
 import android.content.Intent
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -62,6 +63,9 @@ import androidx.compose.material.icons.filled.Spa
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -2211,9 +2215,12 @@ fun PlayerScreen(
 
     val colors = rememberThemeColors(isDarkMode)
 
+    val volTone by viewModel.volumeTone.collectAsState()
+    val volWhite by viewModel.volumeWhite.collectAsState()
+    val volPink by viewModel.volumePink.collectAsState()
+    val volBrown by viewModel.volumeBrown.collectAsState()
+
     var volume by remember { mutableStateOf(1.0f) }
-    var noiseLevel by remember { mutableStateOf(0.15f) }
-    var noiseType by remember { mutableStateOf("pink") }
     var showTimerSheet by remember { mutableStateOf(false) }
     var showVolumeDialog by remember { mutableStateOf(false) }
     var showBreathingDialog by remember { mutableStateOf(false) }
@@ -2328,7 +2335,6 @@ fun PlayerScreen(
                     if (!isPlaying) {
                         viewModel.startPlayback(preset)
                         viewModel.setVolume(volume)
-                        viewModel.setNoise(if (noiseType == "none") null else noiseType, noiseLevel)
                     }
                     showBreathingDialog = true
                 },
@@ -2384,100 +2390,112 @@ fun PlayerScreen(
                 }
             }
 
-            // Session Controls info display
-            Column(
-                modifier = Modifier.fillMaxWidth()
+            // Remaining Duration Row
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 4.dp, vertical = 2.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                Text(text = "Remaining Duration", color = colors.textSecondary, fontSize = 13.sp)
+                Text(
+                    text = if (timerSeconds > 0) {
+                        val minutes = timerSeconds / 60
+                        val seconds = timerSeconds % 60
+                        String.format("%02d:%02d", minutes, seconds)
+                    } else {
+                        "Continuous"
+                    },
+                    color = colors.text,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp
+                )
+            }
+
+            Spacer(modifier = Modifier.height(2.dp))
+
+            // Collapsible Audio Mixer Panel
+            var isMixerExpanded by remember { mutableStateOf(true) }
+            Card(
+                colors = CardDefaults.cardColors(containerColor = colors.card),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .animateContentSize()
+            ) {
+                Column(
+                    modifier = Modifier.padding(14.dp)
                 ) {
-                    Text(text = "Remaining Duration", color = colors.textSecondary, fontSize = 13.sp)
-                    Text(
-                        text = if (timerSeconds > 0) {
-                            val minutes = timerSeconds / 60
-                            val seconds = timerSeconds % 60
-                            String.format("%02d:%02d", minutes, seconds)
-                        } else {
-                            "Continuous"
-                        },
-                        color = colors.text,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(2.dp))
-
-                // Background Noise Settings (Choice Chips UX Refactoring)
-                Column(modifier = Modifier.fillMaxWidth()) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { isMixerExpanded = !isMixerExpanded },
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(text = "Noise: ${noiseType.uppercase()}", color = colors.textSecondary, fontSize = 13.sp)
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Tune,
+                                contentDescription = null,
+                                tint = categoryColor,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Audio Mixer & Layering",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = colors.text
+                            )
+                        }
+                        Icon(
+                            imageVector = if (isMixerExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                            contentDescription = if (isMixerExpanded) "Collapse" else "Expand",
+                            tint = colors.textSecondary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    if (isMixerExpanded) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            listOf("none", "white", "pink", "brown").forEach { type ->
-                                val isSelected = noiseType == type
-                                Box(
-                                    contentAlignment = Alignment.Center,
-                                    modifier = Modifier
-                                        .background(
-                                            color = if (isSelected) categoryColor.copy(alpha = 0.15f) else Color.Transparent,
-                                            shape = RoundedCornerShape(12.dp)
-                                        )
-                                        .border(
-                                            width = 1.dp,
-                                            color = if (isSelected) categoryColor else colors.border,
-                                            shape = RoundedCornerShape(12.dp)
-                                        )
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .clickable {
-                                            noiseType = type
-                                            viewModel.setNoise(if (type == "none") null else type, noiseLevel)
-                                        }
-                                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                                ) {
-                                    Text(
-                                        text = type.uppercase(),
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (isSelected) categoryColor else colors.textSecondary
-                                    )
-                                }
-                            }
+                            MixerSliderRow(
+                                label = "Binaural Beat",
+                                value = volTone,
+                                color = categoryColor,
+                                colors = colors,
+                                onValueChange = { viewModel.updateMixerLevels(it, volWhite, volPink, volBrown) }
+                            )
+                            MixerSliderRow(
+                                label = "White Noise",
+                                value = volWhite,
+                                color = Color(0xFFE0E0E0),
+                                colors = colors,
+                                onValueChange = { viewModel.updateMixerLevels(volTone, it, volPink, volBrown) }
+                            )
+                            MixerSliderRow(
+                                label = "Pink Noise",
+                                value = volPink,
+                                color = ColorAccentStudy,
+                                colors = colors,
+                                onValueChange = { viewModel.updateMixerLevels(volTone, volWhite, it, volBrown) }
+                            )
+                            MixerSliderRow(
+                                label = "Brown Noise",
+                                value = volBrown,
+                                color = ColorAccentSpirit,
+                                colors = colors,
+                                onValueChange = { viewModel.updateMixerLevels(volTone, volWhite, volPink, it) }
+                            )
                         }
                     }
-                    
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    // Fixed: Noise volume slider is kept visible but disabled (grayed out) when "none" is active.
-                    val isNoiseEnabled = noiseType != "none"
-                    Slider(
-                        value = noiseLevel,
-                        onValueChange = {
-                            noiseLevel = it
-                            viewModel.setNoise(noiseType, it)
-                        },
-                        enabled = isNoiseEnabled,
-                        colors = SliderDefaults.colors(
-                            thumbColor = if (isNoiseEnabled) categoryColor else colors.textTertiary,
-                            activeTrackColor = if (isNoiseEnabled) categoryColor else colors.border,
-                            inactiveTrackColor = colors.border,
-                            disabledThumbColor = colors.textTertiary.copy(alpha = 0.5f),
-                            disabledActiveTrackColor = colors.border.copy(alpha = 0.5f),
-                            disabledInactiveTrackColor = colors.border.copy(alpha = 0.3f)
-                        ),
-                        modifier = Modifier.height(28.dp)
-                    )
                 }
             }
+
+            Spacer(modifier = Modifier.height(4.dp))
 
             // Playback Actions (Timer, Play/Pause circle, Volume popup trigger)
             Row(
@@ -2513,7 +2531,7 @@ fun PlayerScreen(
                             if (!isPlaying) {
                                 viewModel.startPlayback(preset)
                                 viewModel.setVolume(volume)
-                                viewModel.setNoise(if (noiseType == "none") null else noiseType, noiseLevel)
+                                viewModel.updateMixerLevels(volTone, volWhite, volPink, volBrown)
                             } else {
                                 viewModel.togglePlayPause()
                             }
@@ -3829,6 +3847,46 @@ fun DrawerItemRow(
         if (action != null) {
             action()
         }
+    }
+}
+
+@Composable
+private fun MixerSliderRow(
+    label: String,
+    value: Float,
+    color: Color,
+    colors: ThemeColors,
+    onValueChange: (Float) -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = label,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                color = colors.textSecondary
+            )
+            Text(
+                text = String.format("%d%%", (value * 100).toInt()),
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = colors.text
+            )
+        }
+        Slider(
+            value = value,
+            onValueChange = onValueChange,
+            colors = SliderDefaults.colors(
+                thumbColor = color,
+                activeTrackColor = color,
+                inactiveTrackColor = colors.border
+            ),
+            modifier = Modifier.height(28.dp)
+        )
     }
 }
 

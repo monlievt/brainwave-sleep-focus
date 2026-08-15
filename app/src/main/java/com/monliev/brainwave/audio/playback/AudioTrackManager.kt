@@ -41,8 +41,10 @@ class AudioTrackManager(
     @Volatile private var fadeRatePerSample = 0.0
 
     @Volatile private var masterVolume: Float = 1.0f
-    @Volatile private var noiseType: String? = null
-    @Volatile private var noiseAmplitude: Float = 0.0f
+    @Volatile private var volTone: Float = 1.0f
+    @Volatile private var volWhite: Float = 0.0f
+    @Volatile private var volPink: Float = 0.0f
+    @Volatile private var volBrown: Float = 0.0f
 
     /**
      * Interface to listen for preset completion events.
@@ -62,8 +64,21 @@ class AudioTrackManager(
         stop() // Ensure clean state before starting
         
         schedulerRef.set(scheduler)
-        noiseType = initialNoiseType
-        noiseAmplitude = initialNoiseAmplitude
+        
+        // Reset and load default preset noise levels
+        volTone = 1.0f
+        volWhite = 0.0f
+        volPink = 0.0f
+        volBrown = 0.0f
+        if (!initialNoiseType.isNullOrEmpty() && !initialNoiseType.equals("none", ignoreCase = true)) {
+            val amp = initialNoiseAmplitude.coerceIn(0.0f, 1.0f)
+            when (initialNoiseType.lowercase()) {
+                "white" -> volWhite = amp
+                "pink" -> volPink = amp
+                "brown" -> volBrown = amp
+            }
+        }
+
         isPlaying.set(true)
         state.set(PlaybackState.PLAYING)
 
@@ -191,11 +206,13 @@ class AudioTrackManager(
     }
 
     /**
-     * Updates the noise configuration on the fly.
+     * Updates the mixer channel levels on the fly.
      */
-    fun setNoise(type: String?, amplitude: Float) {
-        noiseType = type
-        noiseAmplitude = amplitude.coerceIn(0.0f, 1.0f)
+    fun setMixerLevels(tone: Float, white: Float, pink: Float, brown: Float) {
+        volTone = tone.coerceIn(0.0f, 1.0f)
+        volWhite = white.coerceIn(0.0f, 1.0f)
+        volPink = pink.coerceIn(0.0f, 1.0f)
+        volBrown = brown.coerceIn(0.0f, 1.0f)
     }
 
     private fun renderLoop() {
@@ -215,8 +232,10 @@ class AudioTrackManager(
             mixingPipeline.mixBlock(
                 scheduler = scheduler,
                 interleavedBuffer = interleavedBuffer,
-                noiseType = noiseType,
-                noiseAmplitude = noiseAmplitude,
+                volTone = volTone,
+                volWhite = volWhite,
+                volPink = volPink,
+                volBrown = volBrown,
                 masterVolume = masterVolume
             )
 

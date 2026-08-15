@@ -18,16 +18,19 @@ class MixingPipeline(
         scheduler: SequenceScheduler,
         leftBuffer: FloatArray,
         rightBuffer: FloatArray,
-        noiseType: String?,
-        noiseAmplitude: Float,
+        volTone: Float,
+        volWhite: Float,
+        volPink: Float,
+        volBrown: Float,
         masterVolume: Float
     ) {
         val numSamples = leftBuffer.size
 
         // Configure mix parameters
-        val useNoise = !noiseType.isNullOrEmpty() && !noiseType.equals("none", ignoreCase = true)
-        val nAmp = noiseAmplitude.toDouble().coerceIn(0.0, 1.0)
-        val toneAmp = 1.0 - nAmp
+        val vTone = volTone.toDouble().coerceIn(0.0, 1.0)
+        val vWhite = volWhite.toDouble().coerceIn(0.0, 1.0)
+        val vPink = volPink.toDouble().coerceIn(0.0, 1.0)
+        val vBrown = volBrown.toDouble().coerceIn(0.0, 1.0)
         val mVol = masterVolume.toDouble().coerceIn(0.0, 1.0)
 
         for (i in 0 until numSamples) {
@@ -36,16 +39,14 @@ class MixingPipeline(
             // Generate tone
             val (toneL, toneR) = toneGenerator.nextSample(params.carrierFrequency, params.beatFrequency)
             
-            // Generate noise (identically to both channels)
-            val noiseVal = if (useNoise) {
-                noiseGenerator.nextSample(noiseType)
-            } else {
-                0.0
-            }
+            // Generate combined noises (identically to both channels)
+            val noiseVal = (noiseGenerator.nextSample("white") * vWhite) +
+                           (noiseGenerator.nextSample("pink") * vPink) +
+                           (noiseGenerator.nextSample("brown") * vBrown)
 
-            // Mix: Left & Right channels
-            val mixedL = (toneL * toneAmp) + (noiseVal * nAmp)
-            val mixedR = (toneR * toneAmp) + (noiseVal * nAmp)
+            // Mix: Left & Right channels (tone multiplied by tone level, combined noise added directly)
+            val mixedL = (toneL * vTone) + noiseVal
+            val mixedR = (toneR * vTone) + noiseVal
 
             // Apply step-level fadeFactor, master volume, and soft limiter tanh()
             leftBuffer[i] = SoftLimiter.limit(mixedL * params.fadeFactor * mVol).toFloat()
@@ -60,15 +61,17 @@ class MixingPipeline(
     fun mixBlock(
         scheduler: SequenceScheduler,
         interleavedBuffer: FloatArray,
-        noiseType: String?,
-        noiseAmplitude: Float,
+        volTone: Float,
+        volWhite: Float,
+        volPink: Float,
+        volBrown: Float,
         masterVolume: Float
     ) {
         val numSamples = interleavedBuffer.size / 2
         val leftBuffer = FloatArray(numSamples)
         val rightBuffer = FloatArray(numSamples)
 
-        mixBlock(scheduler, leftBuffer, rightBuffer, noiseType, noiseAmplitude, masterVolume)
+        mixBlock(scheduler, leftBuffer, rightBuffer, volTone, volWhite, volPink, volBrown, masterVolume)
 
         // Interleave left and right buffers
         for (i in 0 until numSamples) {
