@@ -1,0 +1,21 @@
+{
+  "preset_id": "study_focus_transition",
+  "category": "STUDY",
+  "title": "Focus Transition",
+  "description": "Transitioning focus state for study sessions",
+  "carrier_frequency_hz": 225.0,
+  "steps": [
+    {
+      "type": "transition",
+      "start_beat_frequency_hz": 12.0,
+      "end_beat_frequency_hz": 8.0,
+      "duration_seconds": 180,
+      "fade_in_seconds": 10,
+      "fade_out_seconds": 20
+    }
+  ],
+  "background_noise": {
+    "type": "pink",
+    "amplitude": 0.1
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "preset_id": "body_inflammation_problems",
+  "category": "BODY",
+  "title": "Inflammation Problems",
+  "description": "Help you with Overall Inflammation problems",
+  "carrier_frequency_hz": 195.0,
+  "steps": [
+    {
+      "type": "stable",
+      "beat_frequency_hz": 20.0,
+      "duration_seconds": 1800,
+      "fade_in_seconds": 10,
+      "fade_out_seconds": 20
+    }
+  ],
+  "background_noise": {
+    "type": "pink",
+    "amplitude": 0.12
+  }
+}

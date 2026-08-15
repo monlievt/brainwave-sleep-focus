@@ -1,0 +1,20 @@
+{
+  "preset_id": "brain_intelligence",
+  "category": "BRAIN",
+  "title": "Intelligence",
+  "description": "Associated with the cortex and has the effect of increased intelligence",
+  "carrier_frequency_hz": 280.0,
+  "steps": [
+    {
+      "type": "stable",
+      "beat_frequency_hz": 15.4,
+      "duration_seconds": 1800,
+      "fade_in_seconds": 10,
+      "fade_out_seconds": 20
+    }
+  ],
+  "background_noise": {
+    "type": "white",
+    "amplitude": 0.08
+  }
+}

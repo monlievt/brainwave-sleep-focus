@@ -1,0 +1,20 @@
+{
+  "preset_id": "sleep_deep_sleep",
+  "category": "SLEEP",
+  "title": "Deep Sleep",
+  "description": "People in deep sleep are less apt to wake in response to external stimuli than those in light sleep",
+  "carrier_frequency_hz": 180.0,
+  "steps": [
+    {
+      "type": "stable",
+      "beat_frequency_hz": 3.9,
+      "duration_seconds": 3600,
+      "fade_in_seconds": 20,
+      "fade_out_seconds": 30
+    }
+  ],
+  "background_noise": {
+    "type": "brown",
+    "amplitude": 0.2
+  }
+}

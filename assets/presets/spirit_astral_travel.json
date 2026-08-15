@@ -1,0 +1,20 @@
+{
+  "preset_id": "spirit_astral_travel",
+  "category": "SPIRIT",
+  "title": "Astral travel",
+  "description": "Let your body travel across the dreams",
+  "carrier_frequency_hz": 250.0,
+  "steps": [
+    {
+      "type": "stable",
+      "beat_frequency_hz": 7.0,
+      "duration_seconds": 2700,
+      "fade_in_seconds": 15,
+      "fade_out_seconds": 30
+    }
+  ],
+  "background_noise": {
+    "type": "brown",
+    "amplitude": 0.2
+  }
+}

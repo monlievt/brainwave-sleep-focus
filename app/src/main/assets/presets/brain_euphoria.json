@@ -1,0 +1,20 @@
+{
+  "preset_id": "brain_euphoria",
+  "category": "BRAIN",
+  "title": "Euphoria",
+  "description": "Overcome yourself with feelings of happiness, excitement, and well-being",
+  "carrier_frequency_hz": 290.0,
+  "steps": [
+    {
+      "type": "stable",
+      "beat_frequency_hz": 20.0,
+      "duration_seconds": 1800,
+      "fade_in_seconds": 10,
+      "fade_out_seconds": 20
+    }
+  ],
+  "background_noise": {
+    "type": "white",
+    "amplitude": 0.08
+  }
+}

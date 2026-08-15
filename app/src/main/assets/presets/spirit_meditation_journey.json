@@ -1,0 +1,35 @@
+{
+  "preset_id": "spirit_meditation_journey",
+  "category": "SPIRIT",
+  "title": "Meditation Journey",
+  "description": "Journey into deep states of meditation and awareness",
+  "carrier_frequency_hz": 245.0,
+  "steps": [
+    {
+      "type": "stable",
+      "beat_frequency_hz": 8.0,
+      "duration_seconds": 60,
+      "fade_in_seconds": 10,
+      "fade_out_seconds": 0
+    },
+    {
+      "type": "transition",
+      "start_beat_frequency_hz": 10.0,
+      "end_beat_frequency_hz": 4.0,
+      "duration_seconds": 120,
+      "fade_in_seconds": 0,
+      "fade_out_seconds": 0
+    },
+    {
+      "type": "stable",
+      "beat_frequency_hz": 4.0,
+      "duration_seconds": 120,
+      "fade_in_seconds": 0,
+      "fade_out_seconds": 30
+    }
+  ],
+  "background_noise": {
+    "type": "brown",
+    "amplitude": 0.15
+  }
+}

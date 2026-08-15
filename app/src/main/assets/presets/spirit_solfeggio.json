@@ -1,0 +1,20 @@
+{
+  "preset_id": "spirit_solfeggio",
+  "category": "SPIRIT",
+  "title": "Solfeggio",
+  "description": "This frequency is known as the Earth Resonance. \"Schumann Resonance.\"",
+  "carrier_frequency_hz": 273.0,
+  "steps": [
+    {
+      "type": "stable",
+      "beat_frequency_hz": 7.83,
+      "duration_seconds": 2700,
+      "fade_in_seconds": 15,
+      "fade_out_seconds": 30
+    }
+  ],
+  "background_noise": {
+    "type": "pink",
+    "amplitude": 0.15
+  }
+}

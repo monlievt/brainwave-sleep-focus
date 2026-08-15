@@ -1,0 +1,20 @@
+{
+  "preset_id": "brain_relaxation",
+  "category": "BRAIN",
+  "title": "Relaxation",
+  "description": "A binaural beat for mental and physical relaxation",
+  "carrier_frequency_hz": 255.0,
+  "steps": [
+    {
+      "type": "stable",
+      "beat_frequency_hz": 6.0,
+      "duration_seconds": 2700,
+      "fade_in_seconds": 15,
+      "fade_out_seconds": 30
+    }
+  ],
+  "background_noise": {
+    "type": "brown",
+    "amplitude": 0.15
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "preset_id": "body_universal_healing",
+  "category": "BODY",
+  "title": "Universal Healing",
+  "description": "Delta 1.5Hz is known as Abrahams Universal Healing Rate and is associated with Sleep",
+  "carrier_frequency_hz": 200.0,
+  "steps": [
+    {
+      "type": "stable",
+      "beat_frequency_hz": 1.5,
+      "duration_seconds": 2700,
+      "fade_in_seconds": 15,
+      "fade_out_seconds": 30
+    }
+  ],
+  "background_noise": {
+    "type": "pink",
+    "amplitude": 0.15
+  }
+}
