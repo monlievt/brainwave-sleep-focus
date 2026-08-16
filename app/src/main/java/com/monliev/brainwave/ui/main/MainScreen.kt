@@ -510,7 +510,12 @@ fun MainTabsScreen(
                             fontWeight = FontWeight.Black,
                             color = colors.text
                         )
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "Version $versionName",
+                            fontSize = 11.sp,
+                            color = colors.textSecondary.copy(alpha = 0.8f)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
                         if (isPremiumUnlocked) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -672,15 +677,7 @@ fun MainTabsScreen(
                         }
                     )
 
-                    Spacer(modifier = Modifier.height(8.dp))
 
-                    // Mode indicator
-                    Text(
-                        text = "Version $versionName",
-                        fontSize = 11.sp,
-                        color = colors.textTertiary,
-                        modifier = Modifier.padding(top = 16.dp)
-                    )
                 }
             }
         }
@@ -2123,7 +2120,7 @@ fun CategoryDetailScreen(
                 LazyColumn(
                     state = listState,
                     verticalArrangement = Arrangement.spacedBy(16.dp),
-                    contentPadding = PaddingValues(bottom = 16.dp),
+                    contentPadding = PaddingValues(bottom = 140.dp),
                     modifier = Modifier.weight(1f)
                 ) {
                     items(firstPart) { preset ->
@@ -2156,7 +2153,7 @@ fun CategoryDetailScreen(
                 LazyColumn(
                     state = listState,
                     verticalArrangement = Arrangement.spacedBy(16.dp),
-                    contentPadding = PaddingValues(bottom = 16.dp),
+                    contentPadding = PaddingValues(bottom = 140.dp),
                     modifier = Modifier.weight(1f)
                 ) {
                     items(presets) { preset ->
