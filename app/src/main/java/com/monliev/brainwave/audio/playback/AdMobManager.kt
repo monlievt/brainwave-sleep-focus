@@ -175,8 +175,10 @@ object AdMobManager {
     fun showRewardedAd(activity: Activity, onUserEarnedReward: () -> Unit, onAdClosed: () -> Unit) {
         val ad = rewardedAd
         if (ad == null) {
-            onAdClosed()
+            // Fallback: grant reward immediately if ad failed to load/offline
+            onUserEarnedReward()
             loadRewardedAd(activity.applicationContext)
+            android.widget.Toast.makeText(activity, "Ad not ready. Unlocked for 24h!", android.widget.Toast.LENGTH_SHORT).show()
             return
         }
 

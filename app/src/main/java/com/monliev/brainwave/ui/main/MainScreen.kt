@@ -2460,6 +2460,7 @@ fun PlayerScreen(
 
             // Collapsible Audio Mixer Panel
             var isMixerExpanded by remember { mutableStateOf(true) }
+            var isPremiumNatureExpanded by remember { mutableStateOf(false) }
             Box(
                 modifier = Modifier.fillMaxWidth(),
                 contentAlignment = Alignment.Center
@@ -2575,125 +2576,153 @@ fun PlayerScreen(
                             Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(colors.border.copy(alpha = 0.5f)))
                             Spacer(modifier = Modifier.height(8.dp))
 
-                            // 2. Premium Sounds Block
-                            Text(
-                                text = "Premium Nature Sounds",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = categoryColor,
-                                modifier = Modifier.padding(bottom = 6.dp)
-                            )
-
-                            Box(
-                                modifier = Modifier.fillMaxWidth(),
-                                contentAlignment = Alignment.Center
+                            // 2. Premium Sounds Section Header (Sub-collapsible / Spoiler)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { isPremiumNatureExpanded = !isPremiumNatureExpanded }
+                                    .padding(vertical = 6.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Column(
-                                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    MixerSliderRow(
-                                        label = "Rain Sound 🌧️",
-                                        value = volRain,
-                                        color = Color(0xFF5DBEEA),
-                                        colors = colors,
-                                        onValueChange = { viewModel.updateNatureMixerLevels(it, volRiver, volOcean, volCampfire, volWind, volCoffeeShop) }
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = "Premium Nature Sounds",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = categoryColor
                                     )
-                                    MixerSliderRow(
-                                        label = "River Sound 🌊",
-                                        value = volRiver,
-                                        color = Color(0xFF008080),
-                                        colors = colors,
-                                        onValueChange = { viewModel.updateNatureMixerLevels(volRain, it, volOcean, volCampfire, volWind, volCoffeeShop) }
-                                    )
-                                    MixerSliderRow(
-                                        label = "Ocean Waves 🏄",
-                                        value = volOcean,
-                                        color = Color(0xFF2A52BE),
-                                        colors = colors,
-                                        onValueChange = { viewModel.updateNatureMixerLevels(volRain, volRiver, it, volCampfire, volWind, volCoffeeShop) }
-                                    )
-                                    MixerSliderRow(
-                                        label = "Campfire Crackle 🔥",
-                                        value = volCampfire,
-                                        color = Color(0xFFFF8C00),
-                                        colors = colors,
-                                        onValueChange = { viewModel.updateNatureMixerLevels(volRain, volRiver, volOcean, it, volWind, volCoffeeShop) }
-                                    )
-                                    MixerSliderRow(
-                                        label = "Cozy Wind 💨",
-                                        value = volWind,
-                                        color = Color(0xFFB0C4DE),
-                                        colors = colors,
-                                        onValueChange = { viewModel.updateNatureMixerLevels(volRain, volRiver, volOcean, volCampfire, it, volCoffeeShop) }
-                                    )
-                                    MixerSliderRow(
-                                        label = "Coffee Shop ☕",
-                                        value = volCoffeeShop,
-                                        color = Color(0xFF8B4513),
-                                        colors = colors,
-                                        onValueChange = { viewModel.updateNatureMixerLevels(volRain, volRiver, volOcean, volCampfire, volWind, it) }
-                                    )
+                                    if (!isPremiumSoundsUnlocked) {
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Icon(
+                                            imageVector = Icons.Default.Lock,
+                                            contentDescription = "Locked",
+                                            tint = categoryColor,
+                                            modifier = Modifier.size(12.dp)
+                                        )
+                                    }
                                 }
+                                Icon(
+                                    imageVector = if (isPremiumNatureExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                    contentDescription = if (isPremiumNatureExpanded) "Collapse" else "Expand",
+                                    tint = colors.textSecondary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
 
-                                // Glassmorphic Lock Overlay for Premium Sounds only
-                                if (!isPremiumSoundsUnlocked) {
-                                    Box(
-                                        modifier = Modifier
-                                            .matchParentSize()
-                                            .background(colors.card.copy(alpha = 0.92f), shape = RoundedCornerShape(8.dp))
-                                            .border(1.dp, colors.border.copy(alpha = 0.5f), RoundedCornerShape(8.dp)),
-                                        contentAlignment = Alignment.Center
+                            if (isPremiumNatureExpanded) {
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Box(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
-                                        Column(
-                                            horizontalAlignment = Alignment.CenterHorizontally,
-                                            verticalArrangement = Arrangement.Center,
-                                            modifier = Modifier.padding(6.dp)
+                                        MixerSliderRow(
+                                            label = "Rain Sound 🌧️",
+                                            value = volRain,
+                                            color = Color(0xFF5DBEEA),
+                                            colors = colors,
+                                            onValueChange = { viewModel.updateNatureMixerLevels(it, volRiver, volOcean, volCampfire, volWind, volCoffeeShop) }
+                                        )
+                                        MixerSliderRow(
+                                            label = "River Sound 🌊",
+                                            value = volRiver,
+                                            color = Color(0xFF008080),
+                                            colors = colors,
+                                            onValueChange = { viewModel.updateNatureMixerLevels(volRain, it, volOcean, volCampfire, volWind, volCoffeeShop) }
+                                        )
+                                        MixerSliderRow(
+                                            label = "Ocean Waves 🏄",
+                                            value = volOcean,
+                                            color = Color(0xFF2A52BE),
+                                            colors = colors,
+                                            onValueChange = { viewModel.updateNatureMixerLevels(volRain, volRiver, it, volCampfire, volWind, volCoffeeShop) }
+                                        )
+                                        MixerSliderRow(
+                                            label = "Campfire Crackle 🔥",
+                                            value = volCampfire,
+                                            color = Color(0xFFFF8C00),
+                                            colors = colors,
+                                            onValueChange = { viewModel.updateNatureMixerLevels(volRain, volRiver, volOcean, it, volWind, volCoffeeShop) }
+                                        )
+                                        MixerSliderRow(
+                                            label = "Cozy Wind 💨",
+                                            value = volWind,
+                                            color = Color(0xFFB0C4DE),
+                                            colors = colors,
+                                            onValueChange = { viewModel.updateNatureMixerLevels(volRain, volRiver, volOcean, volCampfire, it, volCoffeeShop) }
+                                        )
+                                        MixerSliderRow(
+                                            label = "Coffee Shop ☕",
+                                            value = volCoffeeShop,
+                                            color = Color(0xFF8B4513),
+                                            colors = colors,
+                                            onValueChange = { viewModel.updateNatureMixerLevels(volRain, volRiver, volOcean, volCampfire, volWind, it) }
+                                        )
+                                    }
+
+                                    // Glassmorphic Lock Overlay for Premium Sounds only
+                                    if (!isPremiumSoundsUnlocked) {
+                                        Box(
+                                            modifier = Modifier
+                                                .matchParentSize()
+                                                .background(colors.card.copy(alpha = 0.92f), shape = RoundedCornerShape(8.dp))
+                                                .border(1.dp, colors.border.copy(alpha = 0.5f), RoundedCornerShape(8.dp)),
+                                            contentAlignment = Alignment.Center
                                         ) {
-                                            Row(
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.Center
+                                            Column(
+                                                horizontalAlignment = Alignment.CenterHorizontally,
+                                                verticalArrangement = Arrangement.Center,
+                                                modifier = Modifier.padding(6.dp)
                                             ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Lock,
-                                                    contentDescription = null,
-                                                    tint = categoryColor,
-                                                    modifier = Modifier.size(14.dp)
-                                                )
-                                                Spacer(modifier = Modifier.width(6.dp))
-                                                Text(
-                                                    text = "Unlock Nature Sounds",
-                                                    fontWeight = FontWeight.Bold,
-                                                    fontSize = 12.sp,
-                                                    color = colors.text
-                                                )
-                                            }
-                                            Spacer(modifier = Modifier.height(6.dp))
-                                            Row(
-                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                            ) {
-                                                Button(
-                                                    onClick = {
-                                                        com.monliev.brainwave.audio.playback.AdMobManager.showRewardedAd(
-                                                            activity = context as android.app.Activity,
-                                                            onUserEarnedReward = { viewModel.unlockSchedulerTemporarily() },
-                                                            onAdClosed = {}
-                                                        )
-                                                    },
-                                                    colors = ButtonDefaults.buttonColors(containerColor = categoryColor),
-                                                    shape = RoundedCornerShape(8.dp),
-                                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                                                    modifier = Modifier.height(28.dp)
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.Center
                                                 ) {
-                                                    Text("Unlock Free (Watch Ad)", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                                    Icon(
+                                                        imageVector = Icons.Default.Lock,
+                                                        contentDescription = null,
+                                                        tint = categoryColor,
+                                                        modifier = Modifier.size(14.dp)
+                                                    )
+                                                    Spacer(modifier = Modifier.width(6.dp))
+                                                    Text(
+                                                        text = "Unlock Nature Sounds",
+                                                        fontWeight = FontWeight.Bold,
+                                                        fontSize = 12.sp,
+                                                        color = colors.text
+                                                    )
                                                 }
-                                                OutlinedButton(
-                                                    onClick = { showPaywallDialog = true },
-                                                    border = BorderStroke(1.dp, colors.border),
-                                                    shape = RoundedCornerShape(8.dp),
-                                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                                                    modifier = Modifier.height(28.dp)
+                                                Spacer(modifier = Modifier.height(6.dp))
+                                                Row(
+                                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                                                 ) {
-                                                    Text("Go Premium", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = colors.text)
+                                                    Button(
+                                                        onClick = {
+                                                            com.monliev.brainwave.audio.playback.AdMobManager.showRewardedAd(
+                                                                activity = context as android.app.Activity,
+                                                                onUserEarnedReward = { viewModel.unlockSchedulerTemporarily() },
+                                                                onAdClosed = {}
+                                                            )
+                                                        },
+                                                        colors = ButtonDefaults.buttonColors(containerColor = categoryColor),
+                                                        shape = RoundedCornerShape(8.dp),
+                                                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                                        modifier = Modifier.height(28.dp)
+                                                    ) {
+                                                        Text("Unlock Free (Watch Ad)", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                                    }
+                                                    OutlinedButton(
+                                                        onClick = { showPaywallDialog = true },
+                                                        border = BorderStroke(1.dp, colors.border),
+                                                        shape = RoundedCornerShape(8.dp),
+                                                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                                        modifier = Modifier.height(28.dp)
+                                                    ) {
+                                                        Text("Go Premium", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = colors.text)
+                                                    }
                                                 }
                                             }
                                         }
