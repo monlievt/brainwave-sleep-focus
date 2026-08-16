@@ -474,6 +474,14 @@ fun MainTabsScreen(
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val versionName = remember(context) {
+        try {
+            val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+            packageInfo.versionName ?: "1.5.0"
+        } catch (e: Exception) {
+            "1.5.0"
+        }
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -668,7 +676,7 @@ fun MainTabsScreen(
 
                     // Mode indicator
                     Text(
-                        text = "Version 1.0.0 (MVP)",
+                        text = "Version $versionName",
                         fontSize = 11.sp,
                         color = colors.textTertiary,
                         modifier = Modifier.padding(top = 16.dp)
@@ -2541,14 +2549,6 @@ fun PlayerScreen(
                                     colors = colors,
                                     onValueChange = { viewModel.updateMixerLevels(it, volWhite, volPink, volBrown) }
                                 )
-
-                                MixerSliderRow(
-                                    label = "Rain Sound 🌧️",
-                                    value = volRain,
-                                    color = Color(0xFF5DBEEA),
-                                    colors = colors,
-                                    onValueChange = { viewModel.updateNatureMixerLevels(it, volRiver, volOcean, volCampfire, volWind, volCoffeeShop) }
-                                )
                                 
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
@@ -2657,13 +2657,26 @@ fun PlayerScreen(
 
                         if (isPremiumNatureExpanded) {
                             Spacer(modifier = Modifier.height(12.dp))
-                            Box(
-                                modifier = Modifier.fillMaxWidth(),
-                                contentAlignment = Alignment.Center
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                Column(
-                                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
+                                // Rain Sound is ALWAYS visible and unlocked!
+                                MixerSliderRow(
+                                    label = "Rain Sound 🌧️",
+                                    value = volRain,
+                                    color = Color(0xFF5DBEEA),
+                                    colors = colors,
+                                    onValueChange = { viewModel.updateNatureMixerLevels(it, volRiver, volOcean, volCampfire, volWind, volCoffeeShop) }
+                                )
+
+                                if (isPremiumSoundsUnlocked) {
+                                    // Divider between free and premium sounds
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(colors.border.copy(alpha = 0.3f)))
+                                    Spacer(modifier = Modifier.height(4.dp))
+
+                                    // Display the 5 premium nature sounds
                                     MixerSliderRow(
                                         label = "River Sound 🌊",
                                         value = volRiver,
@@ -2699,21 +2712,19 @@ fun PlayerScreen(
                                         colors = colors,
                                         onValueChange = { viewModel.updateNatureMixerLevels(volRain, volRiver, volOcean, volCampfire, volWind, it) }
                                     )
-                                }
-
-                                // Glassmorphic Lock Overlay for Premium Sounds only
-                                if (!isPremiumSoundsUnlocked) {
-                                    Box(
-                                        modifier = Modifier
-                                            .matchParentSize()
-                                            .background(colors.card.copy(alpha = 0.92f), shape = RoundedCornerShape(8.dp))
-                                            .border(1.dp, colors.border.copy(alpha = 0.5f), RoundedCornerShape(8.dp)),
-                                        contentAlignment = Alignment.Center
+                                } else {
+                                    // Hidden state banner: show beautiful Unlock Prompts instead!
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Card(
+                                        colors = CardDefaults.cardColors(containerColor = colors.background),
+                                        shape = RoundedCornerShape(12.dp),
+                                        border = BorderStroke(1.dp, colors.border.copy(alpha = 0.5f)),
+                                        modifier = Modifier.fillMaxWidth()
                                     ) {
                                         Column(
+                                            modifier = Modifier.padding(12.dp),
                                             horizontalAlignment = Alignment.CenterHorizontally,
-                                            verticalArrangement = Arrangement.Center,
-                                            modifier = Modifier.padding(6.dp)
+                                            verticalArrangement = Arrangement.Center
                                         ) {
                                             Row(
                                                 verticalAlignment = Alignment.CenterVertically,
@@ -2723,17 +2734,25 @@ fun PlayerScreen(
                                                     imageVector = Icons.Default.Lock,
                                                     contentDescription = null,
                                                     tint = categoryColor,
-                                                    modifier = Modifier.size(14.dp)
+                                                    modifier = Modifier.size(16.dp)
                                                 )
                                                 Spacer(modifier = Modifier.width(6.dp))
                                                 Text(
-                                                    text = "Unlock Nature Sounds",
+                                                    text = "Unlock 5 More Nature Sounds",
                                                     fontWeight = FontWeight.Bold,
                                                     fontSize = 12.sp,
                                                     color = colors.text
                                                 )
                                             }
-                                            Spacer(modifier = Modifier.height(6.dp))
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text(
+                                                text = "Watch a quick ad to unlock River, Ocean, Campfire, Cozy Wind, and Coffee Shop loops for 24 hours!",
+                                                fontSize = 10.sp,
+                                                color = colors.textSecondary,
+                                                textAlign = TextAlign.Center,
+                                                modifier = Modifier.padding(horizontal = 8.dp)
+                                            )
+                                            Spacer(modifier = Modifier.height(10.dp))
                                             Row(
                                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                                             ) {
@@ -2747,19 +2766,19 @@ fun PlayerScreen(
                                                     },
                                                     colors = ButtonDefaults.buttonColors(containerColor = categoryColor),
                                                     shape = RoundedCornerShape(8.dp),
-                                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                                                    modifier = Modifier.height(28.dp)
+                                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                                                    modifier = Modifier.height(30.dp)
                                                 ) {
-                                                    Text("Unlock Free (Watch Ad)", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                                    Text("Unlock Free (Watch Ad)", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White)
                                                 }
                                                 OutlinedButton(
                                                     onClick = { showPaywallDialog = true },
                                                     border = BorderStroke(1.dp, colors.border),
-                                                    shape = RoundedCornerShape(8.dp),
-                                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                                                    modifier = Modifier.height(28.dp)
+                                                    shape = RoundedCornerShape(12.dp),
+                                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                                                    modifier = Modifier.height(30.dp)
                                                 ) {
-                                                    Text("Go Premium", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = colors.text)
+                                                    Text("Go Premium", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = colors.text)
                                                 }
                                             }
                                         }
