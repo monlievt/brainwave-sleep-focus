@@ -23,6 +23,11 @@ class MainActivity : ComponentActivity() {
 
     // Initialize Google Mobile Ads SDK and start loading test ads
     try {
+      val requestConfiguration = com.google.android.gms.ads.RequestConfiguration.Builder()
+          .setTestDeviceIds(listOf("EC2D98F60E283A6B690B3D666E6C56DD"))
+          .build()
+      com.google.android.gms.ads.MobileAds.setRequestConfiguration(requestConfiguration)
+
       com.google.android.gms.ads.MobileAds.initialize(this) {
         if (!isPremium) {
           com.monliev.brainwave.audio.playback.AdMobManager.loadAppOpenAd(this@MainActivity)
