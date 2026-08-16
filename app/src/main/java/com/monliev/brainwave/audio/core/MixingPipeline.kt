@@ -22,6 +22,9 @@ class MixingPipeline(
         volWhite: Float,
         volPink: Float,
         volBrown: Float,
+        volRain: Float,
+        volRiver: Float,
+        volOcean: Float,
         masterVolume: Float
     ) {
         val numSamples = leftBuffer.size
@@ -31,6 +34,9 @@ class MixingPipeline(
         val vWhite = volWhite.toDouble().coerceIn(0.0, 1.0)
         val vPink = volPink.toDouble().coerceIn(0.0, 1.0)
         val vBrown = volBrown.toDouble().coerceIn(0.0, 1.0)
+        val vRain = volRain.toDouble().coerceIn(0.0, 1.0)
+        val vRiver = volRiver.toDouble().coerceIn(0.0, 1.0)
+        val vOcean = volOcean.toDouble().coerceIn(0.0, 1.0)
         val mVol = masterVolume.toDouble().coerceIn(0.0, 1.0)
 
         for (i in 0 until numSamples) {
@@ -42,7 +48,10 @@ class MixingPipeline(
             // Generate combined noises (identically to both channels)
             val noiseVal = (noiseGenerator.nextSample("white") * vWhite) +
                            (noiseGenerator.nextSample("pink") * vPink) +
-                           (noiseGenerator.nextSample("brown") * vBrown)
+                           (noiseGenerator.nextSample("brown") * vBrown) +
+                           (noiseGenerator.nextSample("rain") * vRain) +
+                           (noiseGenerator.nextSample("river") * vRiver) +
+                           (noiseGenerator.nextSample("ocean") * vOcean)
 
             // Mix: Left & Right channels (tone multiplied by tone level, combined noise added directly)
             val mixedL = (toneL * vTone) + noiseVal
@@ -65,13 +74,16 @@ class MixingPipeline(
         volWhite: Float,
         volPink: Float,
         volBrown: Float,
+        volRain: Float,
+        volRiver: Float,
+        volOcean: Float,
         masterVolume: Float
     ) {
         val numSamples = interleavedBuffer.size / 2
         val leftBuffer = FloatArray(numSamples)
         val rightBuffer = FloatArray(numSamples)
 
-        mixBlock(scheduler, leftBuffer, rightBuffer, volTone, volWhite, volPink, volBrown, masterVolume)
+        mixBlock(scheduler, leftBuffer, rightBuffer, volTone, volWhite, volPink, volBrown, volRain, volRiver, volOcean, masterVolume)
 
         // Interleave left and right buffers
         for (i in 0 until numSamples) {

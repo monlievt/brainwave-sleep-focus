@@ -72,6 +72,7 @@ import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -2227,8 +2228,6 @@ fun PlayerScreen(
     val isPremiumUnlocked by viewModel.isPremium.collectAsState()
     val isSchedulerUnlocked by viewModel.isSchedulerUnlockedTemporarily.collectAsState()
     val isMixerFreeUsedToday by viewModel.isMixerFreeUsedToday.collectAsState()
-    // Mixer is accessible when: premium, OR rewarded-ad unlocked, OR free daily quota not yet used
-    val isMixerUnlocked = isPremiumUnlocked || isSchedulerUnlocked || !isMixerFreeUsedToday
 
     val colors = rememberThemeColors(isDarkMode)
 
@@ -2236,6 +2235,9 @@ fun PlayerScreen(
     val volWhite by viewModel.volumeWhite.collectAsState()
     val volPink by viewModel.volumePink.collectAsState()
     val volBrown by viewModel.volumeBrown.collectAsState()
+    val volRain by viewModel.volumeRain.collectAsState()
+    val volRiver by viewModel.volumeRiver.collectAsState()
+    val volOcean by viewModel.volumeOcean.collectAsState()
 
     var volume by remember { mutableStateOf(1.0f) }
     var showTimerSheet by remember { mutableStateOf(false) }
@@ -2248,6 +2250,10 @@ fun PlayerScreen(
     var headphoneJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
 
     var isCurrentSessionFreeAllowed by remember { mutableStateOf(!isMixerFreeUsedToday) }
+
+    // Premium nature sounds (Rain, River, Ocean) are unlocked if premium, if rewarded-ad unlocked, if free daily quota not yet used,
+    // OR if we are currently playing and this session was started while the free quota was still available.
+    val isPremiumSoundsUnlocked = isPremiumUnlocked || isSchedulerUnlocked || !isMixerFreeUsedToday || (isPlaying && isCurrentSessionFreeAllowed)
 
     val currentIsPlaying by androidx.compose.runtime.rememberUpdatedState(isPlaying)
     val currentIsFreeAllowed by androidx.compose.runtime.rememberUpdatedState(isCurrentSessionFreeAllowed)
@@ -2497,6 +2503,8 @@ fun PlayerScreen(
 
                         if (isMixerExpanded) {
                             Spacer(modifier = Modifier.height(12.dp))
+                            
+                            // 1. Free Sounds Block
                             Column(
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
@@ -2505,95 +2513,137 @@ fun PlayerScreen(
                                     value = volTone,
                                     color = categoryColor,
                                     colors = colors,
-                                    onValueChange = { viewModel.updateMixerLevels(it, volWhite, volPink, volBrown) }
+                                    onValueChange = { viewModel.updateMixerLevels(it, volWhite, volPink, volBrown, volRain, volRiver, volOcean) }
                                 )
                                 MixerSliderRow(
                                     label = "White Noise",
                                     value = volWhite,
                                     color = Color(0xFFE0E0E0),
                                     colors = colors,
-                                    onValueChange = { viewModel.updateMixerLevels(volTone, it, volPink, volBrown) }
+                                    onValueChange = { viewModel.updateMixerLevels(volTone, it, volPink, volBrown, volRain, volRiver, volOcean) }
                                 )
                                 MixerSliderRow(
                                     label = "Pink Noise",
                                     value = volPink,
                                     color = ColorAccentStudy,
                                     colors = colors,
-                                    onValueChange = { viewModel.updateMixerLevels(volTone, volWhite, it, volBrown) }
+                                    onValueChange = { viewModel.updateMixerLevels(volTone, volWhite, it, volBrown, volRain, volRiver, volOcean) }
                                 )
                                 MixerSliderRow(
                                     label = "Brown Noise",
                                     value = volBrown,
                                     color = ColorAccentSpirit,
                                     colors = colors,
-                                    onValueChange = { viewModel.updateMixerLevels(volTone, volWhite, volPink, it) }
+                                    onValueChange = { viewModel.updateMixerLevels(volTone, volWhite, volPink, it, volRain, volRiver, volOcean) }
                                 )
                             }
-                        }
-                    }
-                }
 
-                // If locked, overlay a beautiful semi-transparent glassmorphic Locker Panel!
-                if (!isMixerUnlocked) {
-                    Box(
-                        modifier = Modifier
-                            .matchParentSize()
-                            .background(colors.card.copy(alpha = 0.88f), shape = RoundedCornerShape(16.dp))
-                            .border(1.dp, colors.border, RoundedCornerShape(16.dp)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center,
-                            modifier = Modifier.padding(16.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Tune,
-                                contentDescription = null,
-                                tint = categoryColor.copy(alpha = 0.5f),
-                                modifier = Modifier.size(36.dp)
-                            )
-                            Spacer(modifier = Modifier.height(6.dp))
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(colors.border.copy(alpha = 0.5f)))
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            // 2. Premium Sounds Block
                             Text(
-                                text = "Advanced Audio Mixer",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp,
-                                color = colors.text
-                            )
-                            Text(
-                                text = "Layer White, Pink & Brown noises simultaneously.",
+                                text = "Premium Nature Sounds",
                                 fontSize = 11.sp,
-                                color = colors.textSecondary,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
+                                fontWeight = FontWeight.Bold,
+                                color = categoryColor,
+                                modifier = Modifier.padding(bottom = 6.dp)
                             )
-                            Spacer(modifier = Modifier.height(10.dp))
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+
+                            Box(
+                                modifier = Modifier.fillMaxWidth(),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Button(
-                                    onClick = {
-                                        com.monliev.brainwave.audio.playback.AdMobManager.showRewardedAd(
-                                            activity = context as android.app.Activity,
-                                            onUserEarnedReward = { viewModel.unlockSchedulerTemporarily() },
-                                            onAdClosed = {}
-                                        )
-                                    },
-                                    colors = ButtonDefaults.buttonColors(containerColor = categoryColor),
-                                    shape = RoundedCornerShape(10.dp),
-                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                                    modifier = Modifier.height(34.dp)
+                                Column(
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    Text("Unlock Free (Watch Ad)", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                    MixerSliderRow(
+                                        label = "Rain Sound 🌧️",
+                                        value = volRain,
+                                        color = Color(0xFF5DBEEA),
+                                        colors = colors,
+                                        onValueChange = { viewModel.updateMixerLevels(volTone, volWhite, volPink, volBrown, it, volRiver, volOcean) }
+                                    )
+                                    MixerSliderRow(
+                                        label = "River Sound 🌊",
+                                        value = volRiver,
+                                        color = Color(0xFF008080),
+                                        colors = colors,
+                                        onValueChange = { viewModel.updateMixerLevels(volTone, volWhite, volPink, volBrown, volRain, it, volOcean) }
+                                    )
+                                    MixerSliderRow(
+                                        label = "Ocean Waves 🏄",
+                                        value = volOcean,
+                                        color = Color(0xFF2A52BE),
+                                        colors = colors,
+                                        onValueChange = { viewModel.updateMixerLevels(volTone, volWhite, volPink, volBrown, volRain, volRiver, it) }
+                                    )
                                 }
-                                OutlinedButton(
-                                    onClick = { showPaywallDialog = true },
-                                    border = BorderStroke(1.dp, colors.border),
-                                    shape = RoundedCornerShape(10.dp),
-                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                                    modifier = Modifier.height(34.dp)
-                                ) {
-                                    Text("Go Premium", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = colors.text)
+
+                                // Glassmorphic Lock Overlay for Premium Sounds only
+                                if (!isPremiumSoundsUnlocked) {
+                                    Box(
+                                        modifier = Modifier
+                                            .matchParentSize()
+                                            .background(colors.card.copy(alpha = 0.92f), shape = RoundedCornerShape(8.dp))
+                                            .border(1.dp, colors.border.copy(alpha = 0.5f), RoundedCornerShape(8.dp)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.Center,
+                                            modifier = Modifier.padding(6.dp)
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Lock,
+                                                    contentDescription = null,
+                                                    tint = categoryColor,
+                                                    modifier = Modifier.size(14.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Text(
+                                                    text = "Unlock Nature Sounds",
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 12.sp,
+                                                    color = colors.text
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.height(6.dp))
+                                            Row(
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                Button(
+                                                    onClick = {
+                                                        com.monliev.brainwave.audio.playback.AdMobManager.showRewardedAd(
+                                                            activity = context as android.app.Activity,
+                                                            onUserEarnedReward = { viewModel.unlockSchedulerTemporarily() },
+                                                            onAdClosed = {}
+                                                        )
+                                                    },
+                                                    colors = ButtonDefaults.buttonColors(containerColor = categoryColor),
+                                                    shape = RoundedCornerShape(8.dp),
+                                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                                    modifier = Modifier.height(28.dp)
+                                                ) {
+                                                    Text("Unlock Free (Watch Ad)", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                                }
+                                                OutlinedButton(
+                                                    onClick = { showPaywallDialog = true },
+                                                    border = BorderStroke(1.dp, colors.border),
+                                                    shape = RoundedCornerShape(8.dp),
+                                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                                    modifier = Modifier.height(28.dp)
+                                                ) {
+                                                    Text("Go Premium", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = colors.text)
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -2637,7 +2687,7 @@ fun PlayerScreen(
                             if (!isPlaying) {
                                 viewModel.startPlayback(preset)
                                 viewModel.setVolume(volume)
-                                viewModel.updateMixerLevels(volTone, volWhite, volPink, volBrown)
+                                viewModel.updateMixerLevels(volTone, volWhite, volPink, volBrown, volRain, volRiver, volOcean)
                                 if (!headphonesConnected) {
                                     headphoneJob?.cancel()
                                     headphoneJob = coroutineScope.launch {
@@ -3250,7 +3300,7 @@ fun AdMobNativeAd(
     var nativeAdState by remember { mutableStateOf<com.google.android.gms.ads.nativead.NativeAd?>(null) }
 
     androidx.compose.runtime.DisposableEffect(Unit) {
-        val adLoader = com.google.android.gms.ads.AdLoader.Builder(context, "ca-app-pub-3940256099942544/2247696110")
+        val adLoader = com.google.android.gms.ads.AdLoader.Builder(context, context.getString(com.monliev.brainwave.R.string.admob_native_ad_id))
             .forNativeAd { ad : com.google.android.gms.ads.nativead.NativeAd ->
                 nativeAdState = ad
             }

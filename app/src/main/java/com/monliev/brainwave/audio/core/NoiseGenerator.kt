@@ -19,10 +19,17 @@ class NoiseGenerator {
     // Brown noise filter state variables
     private var lastBrownOutput = 0.0
 
+    // Nature sounds state variables
+    private var oceanPhase = 0.0
+    private var rainDropletFilter = 0.0
+    private var riverPhase1 = 0.0
+    private var riverPhase2 = 0.0
+    private var riverFilterState = 0.0
+
     private val random = Random(42) // Seeded for determinism in testing
 
     /**
-     * Generates the next sample for the specified [type] of noise: "white", "pink", or "brown".
+     * Generates the next sample for the specified [type] of noise: "white", "pink", "brown", "rain", "river", "ocean".
      * Returns a value normalized roughly within [-1.0, 1.0].
      */
     fun nextSample(type: String): Double {
@@ -31,6 +38,9 @@ class NoiseGenerator {
             "white" -> white
             "pink" -> generatePinkNoiseSample(white)
             "brown" -> generateBrownNoiseSample(white)
+            "rain" -> generateRainSample(white)
+            "river" -> generateRiverSample(white)
+            "ocean" -> generateOceanSample(white)
             else -> 0.0
         }
     }
@@ -56,6 +66,36 @@ class NoiseGenerator {
         return lastBrownOutput * 3.5 // Normalization gain
     }
 
+    private fun generateOceanSample(white: Double): Double {
+        val pink = generatePinkNoiseSample(white)
+        val brown = generateBrownNoiseSample(white)
+        oceanPhase = (oceanPhase + (2.0 * Math.PI * 0.08) / 44100.0) % (2.0 * Math.PI)
+        val waveMod = 0.5 + 0.45 * Math.sin(oceanPhase)
+        return (pink * 0.65 + brown * 0.35) * waveMod * 1.4
+    }
+
+    private fun generateRainSample(white: Double): Double {
+        val pink = generatePinkNoiseSample(white)
+        val steadyRain = pink * 0.85 + white * 0.15
+        var dropTrigger = 0.0
+        if (random.nextDouble() > 0.9995) {
+            dropTrigger = random.nextDouble(-0.8, 0.8)
+        }
+        rainDropletFilter = 0.85 * rainDropletFilter + dropTrigger * 0.15
+        return (steadyRain + rainDropletFilter * 0.6) * 1.2
+    }
+
+    private fun generateRiverSample(white: Double): Double {
+        val pink = generatePinkNoiseSample(white)
+        riverPhase1 = (riverPhase1 + (2.0 * Math.PI * 1.5) / 44100.0) % (2.0 * Math.PI)
+        riverPhase2 = (riverPhase2 + (2.0 * Math.PI * 3.5) / 44100.0) % (2.0 * Math.PI)
+        val mod1 = 0.6 + 0.4 * Math.sin(riverPhase1)
+        val mod2 = 0.5 + 0.5 * Math.sin(riverPhase2)
+        val riverBase = (pink * 0.7 * mod1) + (white * 0.3 * mod2)
+        riverFilterState = 0.97 * riverFilterState + 0.03 * riverBase
+        return (riverBase - riverFilterState) * 1.5
+    }
+
     /**
      * Resets the filter states.
      */
@@ -68,5 +108,10 @@ class NoiseGenerator {
         b5 = 0.0
         b6 = 0.0
         lastBrownOutput = 0.0
+        oceanPhase = 0.0
+        rainDropletFilter = 0.0
+        riverPhase1 = 0.0
+        riverPhase2 = 0.0
+        riverFilterState = 0.0
     }
 }

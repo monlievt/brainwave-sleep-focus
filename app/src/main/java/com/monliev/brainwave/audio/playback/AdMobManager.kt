@@ -17,9 +17,7 @@ import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
  * and Rewarded Ads on standard (free) tiers safely with automatic cache replenishment.
  */
 object AdMobManager {
-    private const val APP_OPEN_AD_UNIT_ID = "ca-app-pub-3940256099942544/9257395921"
-    private const val INTERSTITIAL_AD_UNIT_ID = "ca-app-pub-3940256099942544/1033173712"
-    private const val REWARDED_AD_UNIT_ID = "ca-app-pub-3940256099942544/5224354917"
+
 
     private var appOpenAd: AppOpenAd? = null
     private var isAppOpenAdLoading = false
@@ -49,7 +47,7 @@ object AdMobManager {
         val request = AdRequest.Builder().build()
         AppOpenAd.load(
             context,
-            APP_OPEN_AD_UNIT_ID,
+            context.getString(com.monliev.brainwave.R.string.admob_app_open_ad_id),
             request,
             object : AppOpenAd.AppOpenAdLoadCallback() {
                 override fun onAdLoaded(ad: AppOpenAd) {
@@ -100,7 +98,7 @@ object AdMobManager {
         val request = AdRequest.Builder().build()
         InterstitialAd.load(
             context,
-            INTERSTITIAL_AD_UNIT_ID,
+            context.getString(com.monliev.brainwave.R.string.admob_interstitial_ad_id),
             request,
             object : InterstitialAdLoadCallback() {
                 override fun onAdLoaded(ad: InterstitialAd) {
@@ -158,7 +156,7 @@ object AdMobManager {
         val request = AdRequest.Builder().build()
         RewardedAd.load(
             context,
-            REWARDED_AD_UNIT_ID,
+            context.getString(com.monliev.brainwave.R.string.admob_rewarded_ad_id),
             request,
             object : RewardedAdLoadCallback() {
                 override fun onAdLoaded(ad: RewardedAd) {

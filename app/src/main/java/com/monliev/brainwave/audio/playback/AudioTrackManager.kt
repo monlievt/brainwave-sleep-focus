@@ -45,6 +45,9 @@ class AudioTrackManager(
     @Volatile private var volWhite: Float = 0.0f
     @Volatile private var volPink: Float = 0.0f
     @Volatile private var volBrown: Float = 0.0f
+    @Volatile private var volRain: Float = 0.0f
+    @Volatile private var volRiver: Float = 0.0f
+    @Volatile private var volOcean: Float = 0.0f
 
     /**
      * Interface to listen for preset completion events.
@@ -70,6 +73,9 @@ class AudioTrackManager(
         volWhite = 0.0f
         volPink = 0.0f
         volBrown = 0.0f
+        volRain = 0.0f
+        volRiver = 0.0f
+        volOcean = 0.0f
         if (!initialNoiseType.isNullOrEmpty() && !initialNoiseType.equals("none", ignoreCase = true)) {
             val amp = initialNoiseAmplitude.coerceIn(0.0f, 1.0f)
             when (initialNoiseType.lowercase()) {
@@ -208,11 +214,14 @@ class AudioTrackManager(
     /**
      * Updates the mixer channel levels on the fly.
      */
-    fun setMixerLevels(tone: Float, white: Float, pink: Float, brown: Float) {
+    fun setMixerLevels(tone: Float, white: Float, pink: Float, brown: Float, rain: Float, river: Float, ocean: Float) {
         volTone = tone.coerceIn(0.0f, 1.0f)
         volWhite = white.coerceIn(0.0f, 1.0f)
         volPink = pink.coerceIn(0.0f, 1.0f)
         volBrown = brown.coerceIn(0.0f, 1.0f)
+        volRain = rain.coerceIn(0.0f, 1.0f)
+        volRiver = river.coerceIn(0.0f, 1.0f)
+        volOcean = ocean.coerceIn(0.0f, 1.0f)
     }
 
     private fun renderLoop() {
@@ -236,6 +245,9 @@ class AudioTrackManager(
                 volWhite = volWhite,
                 volPink = volPink,
                 volBrown = volBrown,
+                volRain = volRain,
+                volRiver = volRiver,
+                volOcean = volOcean,
                 masterVolume = masterVolume
             )
 

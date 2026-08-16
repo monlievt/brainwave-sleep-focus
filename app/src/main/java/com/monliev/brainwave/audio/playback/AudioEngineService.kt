@@ -53,6 +53,9 @@ class AudioEngineService : Service(), AudioTrackManager.OnCompletionListener {
     private var volWhite: Float = 0.0f
     private var volPink: Float = 0.0f
     private var volBrown: Float = 0.0f
+    private var volRain: Float = 0.0f
+    private var volRiver: Float = 0.0f
+    private var volOcean: Float = 0.0f
 
     // Sleep Timer coroutine fields
     private val serviceJob = SupervisorJob()
@@ -173,16 +176,20 @@ class AudioEngineService : Service(), AudioTrackManager.OnCompletionListener {
         volWhite = 0.0f
         volPink = 0.0f
         volBrown = 0.0f
-        val activeNoise = noiseType
-        if (!activeNoise.isNullOrEmpty() && !activeNoise.equals("none", ignoreCase = true)) {
-            val amp = noiseAmplitude.coerceIn(0.0f, 1.0f)
-            when (activeNoise.lowercase()) {
+        volRain = 0.0f
+        volRiver = 0.0f
+        volOcean = 0.0f
+        val type = preset.background_noise?.type
+        val amplitude = preset.background_noise?.amplitude ?: 0.0f
+        if (!type.isNullOrEmpty() && !type.equals("none", ignoreCase = true)) {
+            val amp = amplitude.coerceIn(0.0f, 1.0f)
+            when (type.lowercase()) {
                 "white" -> volWhite = amp
                 "pink" -> volPink = amp
                 "brown" -> volBrown = amp
             }
         }
-        audioTrackManager.setMixerLevels(volTone, volWhite, volPink, volBrown)
+        audioTrackManager.setMixerLevels(volTone, volWhite, volPink, volBrown, volRain, volRiver, volOcean)
         audioTrackManager.play(scheduler, noiseType, noiseAmplitude)
 
         updateNotification()
@@ -252,6 +259,9 @@ class AudioEngineService : Service(), AudioTrackManager.OnCompletionListener {
         volWhite = 0.0f
         volPink = 0.0f
         volBrown = 0.0f
+        volRain = 0.0f
+        volRiver = 0.0f
+        volOcean = 0.0f
         if (!type.isNullOrEmpty() && !type.equals("none", ignoreCase = true)) {
             val amp = amplitude.coerceIn(0.0f, 1.0f)
             when (type.lowercase()) {
@@ -260,15 +270,18 @@ class AudioEngineService : Service(), AudioTrackManager.OnCompletionListener {
                 "brown" -> volBrown = amp
             }
         }
-        audioTrackManager.setMixerLevels(volTone, volWhite, volPink, volBrown)
+        audioTrackManager.setMixerLevels(volTone, volWhite, volPink, volBrown, volRain, volRiver, volOcean)
     }
 
-    fun setMixerLevels(tone: Float, white: Float, pink: Float, brown: Float) {
+    fun setMixerLevels(tone: Float, white: Float, pink: Float, brown: Float, rain: Float, river: Float, ocean: Float) {
         volTone = tone
         volWhite = white
         volPink = pink
         volBrown = brown
-        audioTrackManager.setMixerLevels(tone, white, pink, brown)
+        volRain = rain
+        volRiver = river
+        volOcean = ocean
+        audioTrackManager.setMixerLevels(tone, white, pink, brown, rain, river, ocean)
     }
 
     fun getPlayingPreset(): Preset? = currentPreset

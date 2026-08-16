@@ -52,6 +52,9 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
     val volumeWhite = MutableStateFlow(0.0f)
     val volumePink = MutableStateFlow(0.0f)
     val volumeBrown = MutableStateFlow(0.0f)
+    val volumeRain = MutableStateFlow(0.0f)
+    val volumeRiver = MutableStateFlow(0.0f)
+    val volumeOcean = MutableStateFlow(0.0f)
     
     // Deep Link Flow
     val pendingDeepLinkPreset = MutableStateFlow<String?>(null)
@@ -176,12 +179,15 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
     /**
      * Updates the individual channel levels in the UI and pushes them to the active service.
      */
-    fun updateMixerLevels(tone: Float, white: Float, pink: Float, brown: Float) {
+    fun updateMixerLevels(tone: Float, white: Float, pink: Float, brown: Float, rain: Float, river: Float, ocean: Float) {
         volumeTone.value = tone
         volumeWhite.value = white
         volumePink.value = pink
         volumeBrown.value = brown
-        boundService?.setMixerLevels(tone, white, pink, brown)
+        volumeRain.value = rain
+        volumeRiver.value = river
+        volumeOcean.value = ocean
+        boundService?.setMixerLevels(tone, white, pink, brown, rain, river, ocean)
     }
 
     /**
