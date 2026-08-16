@@ -2013,11 +2013,42 @@ fun CategoryDetailScreen(
     val currentPreset by viewModel.currentPreset.collectAsState()
     val isPremiumUnlocked by viewModel.isPremium.collectAsState()
 
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val isCollapsed by androidx.compose.runtime.remember {
+        androidx.compose.runtime.derivedStateOf {
+            listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 80
+        }
+    }
+
     Scaffold(
         containerColor = colors.background,
         topBar = {
             TopAppBar(
-                title = {},
+                title = {
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = isCollapsed,
+                        enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.expandHorizontally(),
+                        exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.shrinkHorizontally()
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = categoryName.uppercase(),
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = color
+                            )
+                            Icon(
+                                imageVector = getCategoryIcon(categoryName),
+                                contentDescription = null,
+                                tint = color.copy(alpha = 0.8f),
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = colors.text)
@@ -2048,25 +2079,31 @@ fun CategoryDetailScreen(
                 .padding(horizontal = 24.dp)
         ) {
             // Large Category Name and Outline Icon Row
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 20.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            androidx.compose.animation.AnimatedVisibility(
+                visible = !isCollapsed,
+                enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.expandVertically(),
+                exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.shrinkVertically()
             ) {
-                Text(
-                    text = categoryName.uppercase(),
-                    fontSize = 38.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = color
-                )
-                Icon(
-                    imageVector = getCategoryIcon(categoryName),
-                    contentDescription = null,
-                    tint = color.copy(alpha = 0.8f),
-                    modifier = Modifier.size(64.dp)
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 20.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = categoryName.uppercase(),
+                        fontSize = 38.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = color
+                    )
+                    Icon(
+                        imageVector = getCategoryIcon(categoryName),
+                        contentDescription = null,
+                        tint = color.copy(alpha = 0.8f),
+                        modifier = Modifier.size(64.dp)
+                    )
+                }
             }
 
             // Fixed: Split presets list to insert AdMob card as a standalone item block.
@@ -2076,6 +2113,7 @@ fun CategoryDetailScreen(
                 val secondPart = remember(presets) { presets.drop(2) }
 
                 LazyColumn(
+                    state = listState,
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     contentPadding = PaddingValues(bottom = 16.dp),
                     modifier = Modifier.weight(1f)
@@ -2108,6 +2146,7 @@ fun CategoryDetailScreen(
                 }
             } else {
                 LazyColumn(
+                    state = listState,
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     contentPadding = PaddingValues(bottom = 16.dp),
                     modifier = Modifier.weight(1f)
@@ -2252,29 +2291,16 @@ fun PlayerScreen(
     val coroutineScope = rememberCoroutineScope()
     var headphoneJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
 
-    var isCurrentSessionFreeAllowed by remember { mutableStateOf(!isMixerFreeUsedToday) }
+    var hasShownHeadphoneWarningThisSession by remember { mutableStateOf(false) }
 
-    // Premium nature sounds (Rain, River, Ocean) are unlocked if premium, if rewarded-ad unlocked, if free daily quota not yet used,
-    // OR if we are currently playing and this session was started while the free quota was still available.
-    val isPremiumSoundsUnlocked = isPremiumUnlocked || isSchedulerUnlocked || !isMixerFreeUsedToday || (isPlaying && isCurrentSessionFreeAllowed)
+    // Premium nature sounds (River, Ocean, etc.) are unlocked if premium or rewarded-ad unlocked.
+    val isPremiumSoundsUnlocked = isPremiumUnlocked || isSchedulerUnlocked
 
     val currentIsPlaying by androidx.compose.runtime.rememberUpdatedState(isPlaying)
-    val currentIsFreeAllowed by androidx.compose.runtime.rememberUpdatedState(isCurrentSessionFreeAllowed)
     val currentIsPremium by androidx.compose.runtime.rememberUpdatedState(isPremiumUnlocked)
     val currentIsSchedulerUnlocked by androidx.compose.runtime.rememberUpdatedState(isSchedulerUnlocked)
 
-    androidx.compose.runtime.DisposableEffect(Unit) {
-        onDispose {
-            if (currentIsFreeAllowed && currentIsPlaying && !currentIsPremium && !currentIsSchedulerUnlocked) {
-                viewModel.recordMixerFreeUse()
-            }
-        }
-    }
-
     androidx.activity.compose.BackHandler {
-        if (isCurrentSessionFreeAllowed && isPlaying && !isPremiumUnlocked && !isSchedulerUnlocked) {
-            viewModel.recordMixerFreeUse()
-        }
         onBackClick()
     }
 
@@ -2391,13 +2417,9 @@ fun PlayerScreen(
                     if (!isPlaying) {
                         viewModel.startPlayback(preset)
                         viewModel.setVolume(volume)
-                        if (!headphonesConnected) {
-                            headphoneJob?.cancel()
-                            headphoneJob = coroutineScope.launch {
-                                showHeadphoneToast = true
-                                kotlinx.coroutines.delay(4000)
-                                showHeadphoneToast = false
-                            }
+                        if (!headphonesConnected && !hasShownHeadphoneWarningThisSession) {
+                            showHeadphoneToast = true
+                            hasShownHeadphoneWarningThisSession = true
                         }
                     }
                     showBreathingDialog = true
@@ -2461,10 +2483,11 @@ fun PlayerScreen(
             // Collapsible Audio Mixer Panel
             var isMixerExpanded by remember { mutableStateOf(true) }
             var isPremiumNatureExpanded by remember { mutableStateOf(false) }
-            Box(
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                contentAlignment = Alignment.Center
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                // Card 1: Audio Mixer & Layering (Tone + Rain + 3 Noise Chips)
                 Card(
                     colors = CardDefaults.cardColors(containerColor = colors.card),
                     shape = RoundedCornerShape(16.dp),
@@ -2508,7 +2531,6 @@ fun PlayerScreen(
                         if (isMixerExpanded) {
                             Spacer(modifier = Modifier.height(12.dp))
                             
-                            // 1. Free Sounds Block
                             Column(
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
@@ -2518,6 +2540,14 @@ fun PlayerScreen(
                                     color = categoryColor,
                                     colors = colors,
                                     onValueChange = { viewModel.updateMixerLevels(it, volWhite, volPink, volBrown) }
+                                )
+
+                                MixerSliderRow(
+                                    label = "Rain Sound 🌧️",
+                                    value = volRain,
+                                    color = Color(0xFF5DBEEA),
+                                    colors = colors,
+                                    onValueChange = { viewModel.updateNatureMixerLevels(it, volRiver, volOcean, volCampfire, volWind, volCoffeeShop) }
                                 )
                                 
                                 Spacer(modifier = Modifier.height(4.dp))
@@ -2571,158 +2601,165 @@ fun PlayerScreen(
                                     )
                                 }
                             }
+                        }
+                    }
+                }
 
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(colors.border.copy(alpha = 0.5f)))
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            // 2. Premium Sounds Section Header (Sub-collapsible / Spoiler)
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { isPremiumNatureExpanded = !isPremiumNatureExpanded }
-                                    .padding(vertical = 6.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        text = "Premium Nature Sounds",
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = categoryColor
-                                    )
-                                    if (!isPremiumSoundsUnlocked) {
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Icon(
-                                            imageVector = Icons.Default.Lock,
-                                            contentDescription = "Locked",
-                                            tint = categoryColor,
-                                            modifier = Modifier.size(12.dp)
-                                        )
-                                    }
-                                }
+                // Card 2: Premium Nature Sounds (River, Ocean, Campfire, Wind, Coffee Shop)
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = colors.card),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .animateContentSize()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { isPremiumNatureExpanded = !isPremiumNatureExpanded },
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
-                                    imageVector = if (isPremiumNatureExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                                    contentDescription = if (isPremiumNatureExpanded) "Collapse" else "Expand",
-                                    tint = colors.textSecondary,
+                                    imageVector = Icons.Default.VolumeUp,
+                                    contentDescription = null,
+                                    tint = categoryColor,
                                     modifier = Modifier.size(20.dp)
                                 )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Premium Nature Sounds",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp,
+                                    color = colors.text
+                                )
+                                if (!isPremiumSoundsUnlocked) {
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Icon(
+                                        imageVector = Icons.Default.Lock,
+                                        contentDescription = "Locked",
+                                        tint = categoryColor,
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                }
                             }
+                            Icon(
+                                imageVector = if (isPremiumNatureExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                contentDescription = if (isPremiumNatureExpanded) "Collapse" else "Expand",
+                                tint = colors.textSecondary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
 
-                            if (isPremiumNatureExpanded) {
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Box(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    contentAlignment = Alignment.Center
+                        if (isPremiumNatureExpanded) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Box(
+                                modifier = Modifier.fillMaxWidth(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    Column(
-                                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        MixerSliderRow(
-                                            label = "Rain Sound 🌧️",
-                                            value = volRain,
-                                            color = Color(0xFF5DBEEA),
-                                            colors = colors,
-                                            onValueChange = { viewModel.updateNatureMixerLevels(it, volRiver, volOcean, volCampfire, volWind, volCoffeeShop) }
-                                        )
-                                        MixerSliderRow(
-                                            label = "River Sound 🌊",
-                                            value = volRiver,
-                                            color = Color(0xFF008080),
-                                            colors = colors,
-                                            onValueChange = { viewModel.updateNatureMixerLevels(volRain, it, volOcean, volCampfire, volWind, volCoffeeShop) }
-                                        )
-                                        MixerSliderRow(
-                                            label = "Ocean Waves 🏄",
-                                            value = volOcean,
-                                            color = Color(0xFF2A52BE),
-                                            colors = colors,
-                                            onValueChange = { viewModel.updateNatureMixerLevels(volRain, volRiver, it, volCampfire, volWind, volCoffeeShop) }
-                                        )
-                                        MixerSliderRow(
-                                            label = "Campfire Crackle 🔥",
-                                            value = volCampfire,
-                                            color = Color(0xFFFF8C00),
-                                            colors = colors,
-                                            onValueChange = { viewModel.updateNatureMixerLevels(volRain, volRiver, volOcean, it, volWind, volCoffeeShop) }
-                                        )
-                                        MixerSliderRow(
-                                            label = "Cozy Wind 💨",
-                                            value = volWind,
-                                            color = Color(0xFFB0C4DE),
-                                            colors = colors,
-                                            onValueChange = { viewModel.updateNatureMixerLevels(volRain, volRiver, volOcean, volCampfire, it, volCoffeeShop) }
-                                        )
-                                        MixerSliderRow(
-                                            label = "Coffee Shop ☕",
-                                            value = volCoffeeShop,
-                                            color = Color(0xFF8B4513),
-                                            colors = colors,
-                                            onValueChange = { viewModel.updateNatureMixerLevels(volRain, volRiver, volOcean, volCampfire, volWind, it) }
-                                        )
-                                    }
+                                    MixerSliderRow(
+                                        label = "River Sound 🌊",
+                                        value = volRiver,
+                                        color = Color(0xFF008080),
+                                        colors = colors,
+                                        onValueChange = { viewModel.updateNatureMixerLevels(volRain, it, volOcean, volCampfire, volWind, volCoffeeShop) }
+                                    )
+                                    MixerSliderRow(
+                                        label = "Ocean Waves 🏄",
+                                        value = volOcean,
+                                        color = Color(0xFF2A52BE),
+                                        colors = colors,
+                                        onValueChange = { viewModel.updateNatureMixerLevels(volRain, volRiver, it, volCampfire, volWind, volCoffeeShop) }
+                                    )
+                                    MixerSliderRow(
+                                        label = "Campfire Crackle 🔥",
+                                        value = volCampfire,
+                                        color = Color(0xFFFF8C00),
+                                        colors = colors,
+                                        onValueChange = { viewModel.updateNatureMixerLevels(volRain, volRiver, volOcean, it, volWind, volCoffeeShop) }
+                                    )
+                                    MixerSliderRow(
+                                        label = "Cozy Wind 💨",
+                                        value = volWind,
+                                        color = Color(0xFFB0C4DE),
+                                        colors = colors,
+                                        onValueChange = { viewModel.updateNatureMixerLevels(volRain, volRiver, volOcean, volCampfire, it, volCoffeeShop) }
+                                    )
+                                    MixerSliderRow(
+                                        label = "Coffee Shop ☕",
+                                        value = volCoffeeShop,
+                                        color = Color(0xFF8B4513),
+                                        colors = colors,
+                                        onValueChange = { viewModel.updateNatureMixerLevels(volRain, volRiver, volOcean, volCampfire, volWind, it) }
+                                    )
+                                }
 
-                                    // Glassmorphic Lock Overlay for Premium Sounds only
-                                    if (!isPremiumSoundsUnlocked) {
-                                        Box(
-                                            modifier = Modifier
-                                                .matchParentSize()
-                                                .background(colors.card.copy(alpha = 0.92f), shape = RoundedCornerShape(8.dp))
-                                                .border(1.dp, colors.border.copy(alpha = 0.5f), RoundedCornerShape(8.dp)),
-                                            contentAlignment = Alignment.Center
+                                // Glassmorphic Lock Overlay for Premium Sounds only
+                                if (!isPremiumSoundsUnlocked) {
+                                    Box(
+                                        modifier = Modifier
+                                            .matchParentSize()
+                                            .background(colors.card.copy(alpha = 0.92f), shape = RoundedCornerShape(8.dp))
+                                            .border(1.dp, colors.border.copy(alpha = 0.5f), RoundedCornerShape(8.dp)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.Center,
+                                            modifier = Modifier.padding(6.dp)
                                         ) {
-                                            Column(
-                                                horizontalAlignment = Alignment.CenterHorizontally,
-                                                verticalArrangement = Arrangement.Center,
-                                                modifier = Modifier.padding(6.dp)
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.Center
                                             ) {
-                                                Row(
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    horizontalArrangement = Arrangement.Center
+                                                Icon(
+                                                    imageVector = Icons.Default.Lock,
+                                                    contentDescription = null,
+                                                    tint = categoryColor,
+                                                    modifier = Modifier.size(14.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Text(
+                                                    text = "Unlock Nature Sounds",
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 12.sp,
+                                                    color = colors.text
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.height(6.dp))
+                                            Row(
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                Button(
+                                                    onClick = {
+                                                        com.monliev.brainwave.audio.playback.AdMobManager.showRewardedAd(
+                                                            activity = context as android.app.Activity,
+                                                            onUserEarnedReward = { viewModel.unlockSchedulerTemporarily() },
+                                                            onAdClosed = {}
+                                                        )
+                                                    },
+                                                    colors = ButtonDefaults.buttonColors(containerColor = categoryColor),
+                                                    shape = RoundedCornerShape(8.dp),
+                                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                                    modifier = Modifier.height(28.dp)
                                                 ) {
-                                                    Icon(
-                                                        imageVector = Icons.Default.Lock,
-                                                        contentDescription = null,
-                                                        tint = categoryColor,
-                                                        modifier = Modifier.size(14.dp)
-                                                    )
-                                                    Spacer(modifier = Modifier.width(6.dp))
-                                                    Text(
-                                                        text = "Unlock Nature Sounds",
-                                                        fontWeight = FontWeight.Bold,
-                                                        fontSize = 12.sp,
-                                                        color = colors.text
-                                                    )
+                                                    Text("Unlock Free (Watch Ad)", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White)
                                                 }
-                                                Spacer(modifier = Modifier.height(6.dp))
-                                                Row(
-                                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                                OutlinedButton(
+                                                    onClick = { showPaywallDialog = true },
+                                                    border = BorderStroke(1.dp, colors.border),
+                                                    shape = RoundedCornerShape(8.dp),
+                                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                                    modifier = Modifier.height(28.dp)
                                                 ) {
-                                                    Button(
-                                                        onClick = {
-                                                            com.monliev.brainwave.audio.playback.AdMobManager.showRewardedAd(
-                                                                activity = context as android.app.Activity,
-                                                                onUserEarnedReward = { viewModel.unlockSchedulerTemporarily() },
-                                                                onAdClosed = {}
-                                                            )
-                                                        },
-                                                        colors = ButtonDefaults.buttonColors(containerColor = categoryColor),
-                                                        shape = RoundedCornerShape(8.dp),
-                                                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                                                        modifier = Modifier.height(28.dp)
-                                                    ) {
-                                                        Text("Unlock Free (Watch Ad)", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                                                    }
-                                                    OutlinedButton(
-                                                        onClick = { showPaywallDialog = true },
-                                                        border = BorderStroke(1.dp, colors.border),
-                                                        shape = RoundedCornerShape(8.dp),
-                                                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                                                        modifier = Modifier.height(28.dp)
-                                                    ) {
-                                                        Text("Go Premium", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = colors.text)
-                                                    }
+                                                    Text("Go Premium", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = colors.text)
                                                 }
                                             }
                                         }
@@ -2772,21 +2809,12 @@ fun PlayerScreen(
                                 viewModel.setVolume(volume)
                                 viewModel.updateMixerLevels(volTone, volWhite, volPink, volBrown)
                                 viewModel.updateNatureMixerLevels(volRain, volRiver, volOcean, volCampfire, volWind, volCoffeeShop)
-                                if (!headphonesConnected) {
-                                    headphoneJob?.cancel()
-                                    headphoneJob = coroutineScope.launch {
-                                        showHeadphoneToast = true
-                                        kotlinx.coroutines.delay(4000)
-                                        showHeadphoneToast = false
-                                    }
+                                if (!headphonesConnected && !hasShownHeadphoneWarningThisSession) {
+                                    showHeadphoneToast = true
+                                    hasShownHeadphoneWarningThisSession = true
                                 }
                             } else {
                                 viewModel.togglePlayPause()
-                                // Record daily free mixer session usage when user explicitly pauses/stops
-                                if (isCurrentSessionFreeAllowed && !isPremiumUnlocked && !isSchedulerUnlocked) {
-                                    viewModel.recordMixerFreeUse()
-                                    isCurrentSessionFreeAllowed = false
-                                }
                             }
                         }
                 ) {
@@ -2852,44 +2880,47 @@ fun PlayerScreen(
             }
         } // Column ends
 
-        // Floating Headphone Warning overlay (Centered, fadeIn + fadeOut)
-        AnimatedVisibility(
-            visible = showHeadphoneToast,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier
-                .align(Alignment.Center)
-                .padding(horizontal = 32.dp)
-        ) {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = colors.card),
-                shape = RoundedCornerShape(12.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(1.dp, ColorAccentSpirit.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
-                    .clickable { showHeadphoneToast = false } // Tap to dismiss
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = null,
-                        tint = ColorAccentSpirit,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
+        if (showHeadphoneToast) {
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { showHeadphoneToast = false },
+                title = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                            tint = categoryColor,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Text(
+                            text = "Headphones Recommended",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = colors.text
+                        )
+                    }
+                },
+                text = {
                     Text(
-                        text = "For best results, please use headphones 🎧",
-                        color = colors.text,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.weight(1f)
+                        text = "Binaural beats require stereo separation to work. Please wear headphones or earbuds to experience the brainwave entrainment effect.",
+                        fontSize = 14.sp,
+                        color = colors.textSecondary
                     )
-                }
-            }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = { showHeadphoneToast = false },
+                        colors = ButtonDefaults.buttonColors(containerColor = categoryColor),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text("Understood 🎧", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                },
+                containerColor = colors.card,
+                shape = RoundedCornerShape(16.dp)
+            )
         }
     } // Box ends
 } // Scaffold lambda ends
