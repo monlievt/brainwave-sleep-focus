@@ -1193,13 +1193,15 @@ fun CreatePresetDialog(
     var noiseVolume by remember { mutableStateOf(0.15f) }
     var timerMins by remember { mutableIntStateOf(30) }
 
-    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+    androidx.compose.ui.window.Dialog(
+        onDismissRequest = onDismiss,
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+    ) {
         Card(
             colors = CardDefaults.cardColors(containerColor = colors.background),
             shape = RoundedCornerShape(20.dp),
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
+                .fillMaxWidth(0.92f)
                 .border(1.dp, colors.border, RoundedCornerShape(20.dp))
         ) {
             Column(
@@ -1267,7 +1269,7 @@ fun CreatePresetDialog(
                             ) {
                                 Text(
                                     text = cat,
-                                    fontSize = 9.sp,
+                                    fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = if (isSelected) catColor else colors.textSecondary
                                 )
@@ -2245,6 +2247,28 @@ fun PlayerScreen(
     val coroutineScope = rememberCoroutineScope()
     var headphoneJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
 
+    var isCurrentSessionFreeAllowed by remember { mutableStateOf(!isMixerFreeUsedToday) }
+
+    val currentIsPlaying by androidx.compose.runtime.rememberUpdatedState(isPlaying)
+    val currentIsFreeAllowed by androidx.compose.runtime.rememberUpdatedState(isCurrentSessionFreeAllowed)
+    val currentIsPremium by androidx.compose.runtime.rememberUpdatedState(isPremiumUnlocked)
+    val currentIsSchedulerUnlocked by androidx.compose.runtime.rememberUpdatedState(isSchedulerUnlocked)
+
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        onDispose {
+            if (currentIsFreeAllowed && currentIsPlaying && !currentIsPremium && !currentIsSchedulerUnlocked) {
+                viewModel.recordMixerFreeUse()
+            }
+        }
+    }
+
+    androidx.activity.compose.BackHandler {
+        if (isCurrentSessionFreeAllowed && isPlaying && !isPremiumUnlocked && !isSchedulerUnlocked) {
+            viewModel.recordMixerFreeUse()
+        }
+        onBackClick()
+    }
+
     val activeBeatHz = remember(preset) {
         preset.steps.firstOrNull()?.beat_frequency_hz
             ?: preset.steps.firstOrNull()?.start_beat_frequency_hz
@@ -2614,10 +2638,6 @@ fun PlayerScreen(
                                 viewModel.startPlayback(preset)
                                 viewModel.setVolume(volume)
                                 viewModel.updateMixerLevels(volTone, volWhite, volPink, volBrown)
-                                // Record free daily mixer use when play starts (only if not premium/rewarded)
-                                if (!isPremiumUnlocked && !isSchedulerUnlocked) {
-                                    viewModel.recordMixerFreeUse()
-                                }
                                 if (!headphonesConnected) {
                                     headphoneJob?.cancel()
                                     headphoneJob = coroutineScope.launch {
@@ -2628,6 +2648,11 @@ fun PlayerScreen(
                                 }
                             } else {
                                 viewModel.togglePlayPause()
+                                // Record daily free mixer session usage when user explicitly pauses/stops
+                                if (isCurrentSessionFreeAllowed && !isPremiumUnlocked && !isSchedulerUnlocked) {
+                                    viewModel.recordMixerFreeUse()
+                                    isCurrentSessionFreeAllowed = false
+                                }
                             }
                         }
                 ) {
