@@ -18,14 +18,16 @@ class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
 
+    val sharedPrefs = getSharedPreferences("brainwave_prefs", MODE_PRIVATE)
+    val isPremium = sharedPrefs.getBoolean("is_premium_unlocked", false)
+
     // Initialize Google Mobile Ads SDK and start loading test ads
     try {
       com.google.android.gms.ads.MobileAds.initialize(this) {
-        val viewModel = androidx.lifecycle.ViewModelProvider(this)[MainScreenViewModel::class.java]
-        if (!viewModel.isPremium.value) {
-          com.monliev.brainwave.audio.playback.AdMobManager.loadAppOpenAd(this)
-          com.monliev.brainwave.audio.playback.AdMobManager.loadInterstitialAd(this)
-          com.monliev.brainwave.audio.playback.AdMobManager.loadRewardedAd(this)
+        if (!isPremium) {
+          com.monliev.brainwave.audio.playback.AdMobManager.loadAppOpenAd(this@MainActivity)
+          com.monliev.brainwave.audio.playback.AdMobManager.loadInterstitialAd(this@MainActivity)
+          com.monliev.brainwave.audio.playback.AdMobManager.loadRewardedAd(this@MainActivity)
         }
       }
     } catch (e: Exception) {

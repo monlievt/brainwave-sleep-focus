@@ -240,6 +240,14 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
         volumeWhite.value = 0.0f
         volumePink.value = 0.0f
         volumeBrown.value = 0.0f
+        volumeRain.value = 0.0f
+        volumeRiver.value = 0.0f
+        volumeOcean.value = 0.0f
+        volumeCampfire.value = 0.0f
+        volumeWind.value = 0.0f
+        volumeCoffeeShop.value = 0.0f
+        boundService?.setNatureMixerLevels(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f)
+
         val defaultNoiseType = preset.background_noise?.type
         val defaultNoiseAmp = preset.background_noise?.amplitude ?: 0.0f
         if (!defaultNoiseType.isNullOrEmpty() && !defaultNoiseType.equals("none", ignoreCase = true)) {
