@@ -55,6 +55,9 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
     val volumeRain = MutableStateFlow(0.0f)
     val volumeRiver = MutableStateFlow(0.0f)
     val volumeOcean = MutableStateFlow(0.0f)
+    val volumeCampfire = MutableStateFlow(0.0f)
+    val volumeWind = MutableStateFlow(0.0f)
+    val volumeCoffeeShop = MutableStateFlow(0.0f)
     
     // Deep Link Flow
     val pendingDeepLinkPreset = MutableStateFlow<String?>(null)
@@ -73,6 +76,8 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
             val binder = service as AudioEngineService.LocalBinder
             boundService = binder.getService()
+            boundService?.setMixerLevels(volumeTone.value, volumeWhite.value, volumePink.value, volumeBrown.value)
+            boundService?.setNatureMixerLevels(volumeRain.value, volumeRiver.value, volumeOcean.value, volumeCampfire.value, volumeWind.value, volumeCoffeeShop.value)
             startStateQueryLoop()
         }
 
@@ -179,15 +184,25 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
     /**
      * Updates the individual channel levels in the UI and pushes them to the active service.
      */
-    fun updateMixerLevels(tone: Float, white: Float, pink: Float, brown: Float, rain: Float, river: Float, ocean: Float) {
+    fun updateMixerLevels(tone: Float, white: Float, pink: Float, brown: Float) {
         volumeTone.value = tone
         volumeWhite.value = white
         volumePink.value = pink
         volumeBrown.value = brown
+        boundService?.setMixerLevels(tone, white, pink, brown)
+    }
+
+    /**
+     * Updates the premium nature and ambient sound channel levels.
+     */
+    fun updateNatureMixerLevels(rain: Float, river: Float, ocean: Float, campfire: Float, wind: Float, coffeeShop: Float) {
         volumeRain.value = rain
         volumeRiver.value = river
         volumeOcean.value = ocean
-        boundService?.setMixerLevels(tone, white, pink, brown, rain, river, ocean)
+        volumeCampfire.value = campfire
+        volumeWind.value = wind
+        volumeCoffeeShop.value = coffeeShop
+        boundService?.setNatureMixerLevels(rain, river, ocean, campfire, wind, coffeeShop)
     }
 
     /**

@@ -10,7 +10,9 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.media.AudioManager
+import android.media.MediaPlayer
 import android.media.session.MediaSession
+import com.monliev.brainwave.R
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
@@ -53,9 +55,17 @@ class AudioEngineService : Service(), AudioTrackManager.OnCompletionListener {
     private var volWhite: Float = 0.0f
     private var volPink: Float = 0.0f
     private var volBrown: Float = 0.0f
+    
+    // Premium Nature Sounds target volumes
     private var volRain: Float = 0.0f
     private var volRiver: Float = 0.0f
     private var volOcean: Float = 0.0f
+    private var volCampfire: Float = 0.0f
+    private var volWind: Float = 0.0f
+    private var volCoffeeShop: Float = 0.0f
+
+    // MediaPlayer instances for seamless audio loops
+    private val naturePlayers = mutableMapOf<String, MediaPlayer>()
 
     // Sleep Timer coroutine fields
     private val serviceJob = SupervisorJob()
@@ -176,9 +186,14 @@ class AudioEngineService : Service(), AudioTrackManager.OnCompletionListener {
         volWhite = 0.0f
         volPink = 0.0f
         volBrown = 0.0f
-        volRain = 0.0f
-        volRiver = 0.0f
-        volOcean = 0.0f
+
+        initNaturePlayers(this)
+        naturePlayers.values.forEach { mp ->
+            try {
+                if (!mp.isPlaying) mp.start()
+            } catch (e: Exception) {}
+        }
+
         val type = preset.background_noise?.type
         val amplitude = preset.background_noise?.amplitude ?: 0.0f
         if (!type.isNullOrEmpty() && !type.equals("none", ignoreCase = true)) {
@@ -189,7 +204,7 @@ class AudioEngineService : Service(), AudioTrackManager.OnCompletionListener {
                 "brown" -> volBrown = amp
             }
         }
-        audioTrackManager.setMixerLevels(volTone, volWhite, volPink, volBrown, volRain, volRiver, volOcean)
+        audioTrackManager.setMixerLevels(volTone, volWhite, volPink, volBrown)
         audioTrackManager.play(scheduler, noiseType, noiseAmplitude)
 
         updateNotification()
@@ -199,6 +214,11 @@ class AudioEngineService : Service(), AudioTrackManager.OnCompletionListener {
         audioTrackManager.pause()
         releaseWakeLock()
         pauseTimer()
+        naturePlayers.values.forEach { mp ->
+            try {
+                if (mp.isPlaying) mp.pause()
+            } catch (e: Exception) {}
+        }
         updateNotification()
     }
 
@@ -208,6 +228,11 @@ class AudioEngineService : Service(), AudioTrackManager.OnCompletionListener {
             acquireWakeLock()
             audioTrackManager.resume()
             resumeTimer()
+            naturePlayers.values.forEach { mp ->
+                try {
+                    if (!mp.isPlaying) mp.start()
+                } catch (e: Exception) {}
+            }
             updateNotification()
         }
     }
@@ -236,6 +261,13 @@ class AudioEngineService : Service(), AudioTrackManager.OnCompletionListener {
         cancelTimer()
         audioTrackManager.stop()
         releaseWakeLock()
+
+        naturePlayers.values.forEach { mp ->
+            try {
+                if (mp.isPlaying) mp.pause()
+                mp.setVolume(0.0f, 0.0f)
+            } catch (e: Exception) {}
+        }
         
         currentPreset = null
         currentScheduler = null
@@ -259,9 +291,6 @@ class AudioEngineService : Service(), AudioTrackManager.OnCompletionListener {
         volWhite = 0.0f
         volPink = 0.0f
         volBrown = 0.0f
-        volRain = 0.0f
-        volRiver = 0.0f
-        volOcean = 0.0f
         if (!type.isNullOrEmpty() && !type.equals("none", ignoreCase = true)) {
             val amp = amplitude.coerceIn(0.0f, 1.0f)
             when (type.lowercase()) {
@@ -270,18 +299,32 @@ class AudioEngineService : Service(), AudioTrackManager.OnCompletionListener {
                 "brown" -> volBrown = amp
             }
         }
-        audioTrackManager.setMixerLevels(volTone, volWhite, volPink, volBrown, volRain, volRiver, volOcean)
+        audioTrackManager.setMixerLevels(volTone, volWhite, volPink, volBrown)
     }
 
-    fun setMixerLevels(tone: Float, white: Float, pink: Float, brown: Float, rain: Float, river: Float, ocean: Float) {
+    fun setMixerLevels(tone: Float, white: Float, pink: Float, brown: Float) {
         volTone = tone
         volWhite = white
         volPink = pink
         volBrown = brown
+        audioTrackManager.setMixerLevels(tone, white, pink, brown)
+    }
+
+    fun setNatureMixerLevels(rain: Float, river: Float, ocean: Float, campfire: Float, wind: Float, coffeeShop: Float) {
         volRain = rain
         volRiver = river
         volOcean = ocean
-        audioTrackManager.setMixerLevels(tone, white, pink, brown, rain, river, ocean)
+        volCampfire = campfire
+        volWind = wind
+        volCoffeeShop = coffeeShop
+
+        initNaturePlayers(this)
+        naturePlayers["rain"]?.setVolume(rain, rain)
+        naturePlayers["river"]?.setVolume(river, river)
+        naturePlayers["ocean"]?.setVolume(ocean, ocean)
+        naturePlayers["campfire"]?.setVolume(campfire, campfire)
+        naturePlayers["wind"]?.setVolume(wind, wind)
+        naturePlayers["coffee_shop"]?.setVolume(coffeeShop, coffeeShop)
     }
 
     fun getPlayingPreset(): Preset? = currentPreset
@@ -318,8 +361,60 @@ class AudioEngineService : Service(), AudioTrackManager.OnCompletionListener {
                 updateNotification()
 
                 if (sleepTimerSecondsRemaining <= 0) {
-                    audioTrackManager.stopWithFade(5.0)
+                    stopPlaybackWithFade()
                     break
+                }
+            }
+        }
+    }
+
+    private fun stopPlaybackWithFade() {
+        audioTrackManager.stopWithFade(5.0)
+        serviceScope.launch {
+            val fadeSteps = 50
+            val stepDelay = 100L // 5.0 seconds total (50 * 100ms)
+            for (step in 1..fadeSteps) {
+                delay(stepDelay)
+                val factor = (fadeSteps - step).toFloat() / fadeSteps
+                naturePlayers.forEach { (key, mp) ->
+                    val baseVol = when(key) {
+                        "rain" -> volRain
+                        "river" -> volRiver
+                        "ocean" -> volOcean
+                        "campfire" -> volCampfire
+                        "wind" -> volWind
+                        "coffee_shop" -> volCoffeeShop
+                        else -> 0.0f
+                    }
+                    val currentVol = baseVol * factor
+                    try {
+                        mp.setVolume(currentVol, currentVol)
+                    } catch (e: Exception) {}
+                }
+            }
+            stopPlayback()
+        }
+    }
+
+    private fun initNaturePlayers(context: Context) {
+        val sounds = mapOf(
+            "rain" to R.raw.rain,
+            "river" to R.raw.river,
+            "ocean" to R.raw.ocean,
+            "campfire" to R.raw.campfire,
+            "wind" to R.raw.wind,
+            "coffee_shop" to R.raw.coffee_shop
+        )
+        for ((key, resId) in sounds) {
+            if (!naturePlayers.containsKey(key)) {
+                try {
+                    val mp = MediaPlayer.create(context, resId).apply {
+                        isLooping = true
+                        setVolume(0.0f, 0.0f)
+                    }
+                    naturePlayers[key] = mp
+                } catch (e: Exception) {
+                    e.printStackTrace()
                 }
             }
         }

@@ -2238,6 +2238,9 @@ fun PlayerScreen(
     val volRain by viewModel.volumeRain.collectAsState()
     val volRiver by viewModel.volumeRiver.collectAsState()
     val volOcean by viewModel.volumeOcean.collectAsState()
+    val volCampfire by viewModel.volumeCampfire.collectAsState()
+    val volWind by viewModel.volumeWind.collectAsState()
+    val volCoffeeShop by viewModel.volumeCoffeeShop.collectAsState()
 
     var volume by remember { mutableStateOf(1.0f) }
     var showTimerSheet by remember { mutableStateOf(false) }
@@ -2513,29 +2516,59 @@ fun PlayerScreen(
                                     value = volTone,
                                     color = categoryColor,
                                     colors = colors,
-                                    onValueChange = { viewModel.updateMixerLevels(it, volWhite, volPink, volBrown, volRain, volRiver, volOcean) }
+                                    onValueChange = { viewModel.updateMixerLevels(it, volWhite, volPink, volBrown) }
                                 )
-                                MixerSliderRow(
-                                    label = "White Noise",
-                                    value = volWhite,
-                                    color = Color(0xFFE0E0E0),
-                                    colors = colors,
-                                    onValueChange = { viewModel.updateMixerLevels(volTone, it, volPink, volBrown, volRain, volRiver, volOcean) }
+                                
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "Background Noise Masking",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = colors.textSecondary,
+                                    modifier = Modifier.padding(bottom = 2.dp)
                                 )
-                                MixerSliderRow(
-                                    label = "Pink Noise",
-                                    value = volPink,
-                                    color = ColorAccentStudy,
-                                    colors = colors,
-                                    onValueChange = { viewModel.updateMixerLevels(volTone, volWhite, it, volBrown, volRain, volRiver, volOcean) }
-                                )
-                                MixerSliderRow(
-                                    label = "Brown Noise",
-                                    value = volBrown,
-                                    color = ColorAccentSpirit,
-                                    colors = colors,
-                                    onValueChange = { viewModel.updateMixerLevels(volTone, volWhite, volPink, it, volRain, volRiver, volOcean) }
-                                )
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    NoiseToggleChip(
+                                        label = "White",
+                                        icon = "⚪",
+                                        isActive = volWhite > 0f,
+                                        activeColor = Color(0xFFE0E0E0),
+                                        colors = colors,
+                                        onClick = {
+                                            val newWhite = if (volWhite > 0f) 0.0f else 0.15f
+                                            viewModel.updateMixerLevels(volTone, newWhite, volPink, volBrown)
+                                        },
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    NoiseToggleChip(
+                                        label = "Pink",
+                                        icon = "🌸",
+                                        isActive = volPink > 0f,
+                                        activeColor = ColorAccentStudy,
+                                        colors = colors,
+                                        onClick = {
+                                            val newPink = if (volPink > 0f) 0.0f else 0.15f
+                                            viewModel.updateMixerLevels(volTone, volWhite, newPink, volBrown)
+                                        },
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    NoiseToggleChip(
+                                        label = "Brown",
+                                        icon = "🟫",
+                                        isActive = volBrown > 0f,
+                                        activeColor = ColorAccentSpirit,
+                                        colors = colors,
+                                        onClick = {
+                                            val newBrown = if (volBrown > 0f) 0.0f else 0.15f
+                                            viewModel.updateMixerLevels(volTone, volWhite, volPink, newBrown)
+                                        },
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
                             }
 
                             Spacer(modifier = Modifier.height(12.dp))
@@ -2563,21 +2596,42 @@ fun PlayerScreen(
                                         value = volRain,
                                         color = Color(0xFF5DBEEA),
                                         colors = colors,
-                                        onValueChange = { viewModel.updateMixerLevels(volTone, volWhite, volPink, volBrown, it, volRiver, volOcean) }
+                                        onValueChange = { viewModel.updateNatureMixerLevels(it, volRiver, volOcean, volCampfire, volWind, volCoffeeShop) }
                                     )
                                     MixerSliderRow(
                                         label = "River Sound 🌊",
                                         value = volRiver,
                                         color = Color(0xFF008080),
                                         colors = colors,
-                                        onValueChange = { viewModel.updateMixerLevels(volTone, volWhite, volPink, volBrown, volRain, it, volOcean) }
+                                        onValueChange = { viewModel.updateNatureMixerLevels(volRain, it, volOcean, volCampfire, volWind, volCoffeeShop) }
                                     )
                                     MixerSliderRow(
                                         label = "Ocean Waves 🏄",
                                         value = volOcean,
                                         color = Color(0xFF2A52BE),
                                         colors = colors,
-                                        onValueChange = { viewModel.updateMixerLevels(volTone, volWhite, volPink, volBrown, volRain, volRiver, it) }
+                                        onValueChange = { viewModel.updateNatureMixerLevels(volRain, volRiver, it, volCampfire, volWind, volCoffeeShop) }
+                                    )
+                                    MixerSliderRow(
+                                        label = "Campfire Crackle 🔥",
+                                        value = volCampfire,
+                                        color = Color(0xFFFF8C00),
+                                        colors = colors,
+                                        onValueChange = { viewModel.updateNatureMixerLevels(volRain, volRiver, volOcean, it, volWind, volCoffeeShop) }
+                                    )
+                                    MixerSliderRow(
+                                        label = "Cozy Wind 💨",
+                                        value = volWind,
+                                        color = Color(0xFFB0C4DE),
+                                        colors = colors,
+                                        onValueChange = { viewModel.updateNatureMixerLevels(volRain, volRiver, volOcean, volCampfire, it, volCoffeeShop) }
+                                    )
+                                    MixerSliderRow(
+                                        label = "Coffee Shop ☕",
+                                        value = volCoffeeShop,
+                                        color = Color(0xFF8B4513),
+                                        colors = colors,
+                                        onValueChange = { viewModel.updateNatureMixerLevels(volRain, volRiver, volOcean, volCampfire, volWind, it) }
                                     )
                                 }
 
@@ -2687,7 +2741,8 @@ fun PlayerScreen(
                             if (!isPlaying) {
                                 viewModel.startPlayback(preset)
                                 viewModel.setVolume(volume)
-                                viewModel.updateMixerLevels(volTone, volWhite, volPink, volBrown, volRain, volRiver, volOcean)
+                                viewModel.updateMixerLevels(volTone, volWhite, volPink, volBrown)
+                                viewModel.updateNatureMixerLevels(volRain, volRiver, volOcean, volCampfire, volWind, volCoffeeShop)
                                 if (!headphonesConnected) {
                                     headphoneJob?.cancel()
                                     headphoneJob = coroutineScope.launch {
@@ -4110,6 +4165,43 @@ private fun MixerSliderRow(
             ),
             modifier = Modifier.height(28.dp)
         )
+    }
+}
+
+@Composable
+private fun NoiseToggleChip(
+    label: String,
+    icon: String,
+    isActive: Boolean,
+    activeColor: Color,
+    colors: ThemeColors,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    androidx.compose.material3.Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(10.dp),
+        color = if (isActive) activeColor.copy(alpha = 0.2f) else colors.card.copy(alpha = 0.3f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, if (isActive) activeColor else colors.border.copy(alpha = 0.3f)),
+        modifier = modifier.height(36.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = icon,
+                fontSize = 13.sp
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = label,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = if (isActive) colors.text else colors.textSecondary
+            )
+        }
     }
 }
 
