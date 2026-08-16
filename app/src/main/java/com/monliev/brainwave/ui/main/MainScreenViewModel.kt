@@ -56,6 +56,10 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
     // Deep Link Flow
     val pendingDeepLinkPreset = MutableStateFlow<String?>(null)
 
+    // Daily free mixer use — tracks if the user already used their 1x free mixer session today.
+    // Resets automatically on a new calendar day. Persisted via SharedPreferences.
+    val isMixerFreeUsedToday = MutableStateFlow(false)
+
     // Room database flows
     val customPresets = MutableStateFlow<List<CustomPresetEntity>>(emptyList())
     val sessionLogs = MutableStateFlow<List<SessionLogEntity>>(emptyList())
@@ -82,6 +86,11 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
         
         val unlockUntil = sharedPrefs.getLong("rewarded_alarm_scheduler_unlocked_until", 0L)
         isSchedulerUnlockedTemporarily.value = (unlockUntil > System.currentTimeMillis())
+
+        // Load daily free mixer use tracking — compare stored date string to today's date
+        val storedFreeDate = sharedPrefs.getString("mixer_free_use_date", "")
+        val todayDate = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
+        isMixerFreeUsedToday.value = (storedFreeDate == todayDate)
 
         // Bind to AudioEngineService
         val intent = Intent(application, AudioEngineService::class.java)
@@ -144,12 +153,24 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
 
     /**
      * Unlocks the bedtime alarm scheduler temporarily for 24 hours.
+     * Also grants full mixer access for the same 24-hour window.
      */
     fun unlockSchedulerTemporarily() {
         val unlockTime = System.currentTimeMillis() + (24 * 60 * 60 * 1000)
         val sharedPrefs = getApplication<Application>().getSharedPreferences("brainwave_prefs", Context.MODE_PRIVATE)
         sharedPrefs.edit().putLong("rewarded_alarm_scheduler_unlocked_until", unlockTime).apply()
         isSchedulerUnlockedTemporarily.value = true
+    }
+
+    /**
+     * Records that the user has used their free daily mixer session today.
+     * Resets automatically when the calendar date changes.
+     */
+    fun recordMixerFreeUse() {
+        val todayDate = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
+        val sharedPrefs = getApplication<Application>().getSharedPreferences("brainwave_prefs", Context.MODE_PRIVATE)
+        sharedPrefs.edit().putString("mixer_free_use_date", todayDate).apply()
+        isMixerFreeUsedToday.value = true
     }
 
     /**

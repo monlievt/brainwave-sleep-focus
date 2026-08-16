@@ -2224,7 +2224,9 @@ fun PlayerScreen(
     val isDarkMode by viewModel.isDarkMode.collectAsState()
     val isPremiumUnlocked by viewModel.isPremium.collectAsState()
     val isSchedulerUnlocked by viewModel.isSchedulerUnlockedTemporarily.collectAsState()
-    val isMixerUnlocked = isPremiumUnlocked || isSchedulerUnlocked
+    val isMixerFreeUsedToday by viewModel.isMixerFreeUsedToday.collectAsState()
+    // Mixer is accessible when: premium, OR rewarded-ad unlocked, OR free daily quota not yet used
+    val isMixerUnlocked = isPremiumUnlocked || isSchedulerUnlocked || !isMixerFreeUsedToday
 
     val colors = rememberThemeColors(isDarkMode)
 
@@ -2513,8 +2515,7 @@ fun PlayerScreen(
                         modifier = Modifier
                             .matchParentSize()
                             .background(colors.card.copy(alpha = 0.88f), shape = RoundedCornerShape(16.dp))
-                            .border(1.dp, colors.border, RoundedCornerShape(16.dp))
-                            .clickable(enabled = false) {}, // Intercept click events
+                            .border(1.dp, colors.border, RoundedCornerShape(16.dp)),
                         contentAlignment = Alignment.Center
                     ) {
                         Column(
@@ -2613,6 +2614,10 @@ fun PlayerScreen(
                                 viewModel.startPlayback(preset)
                                 viewModel.setVolume(volume)
                                 viewModel.updateMixerLevels(volTone, volWhite, volPink, volBrown)
+                                // Record free daily mixer use when play starts (only if not premium/rewarded)
+                                if (!isPremiumUnlocked && !isSchedulerUnlocked) {
+                                    viewModel.recordMixerFreeUse()
+                                }
                                 if (!headphonesConnected) {
                                     headphoneJob?.cancel()
                                     headphoneJob = coroutineScope.launch {
