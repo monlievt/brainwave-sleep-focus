@@ -16,6 +16,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -82,6 +83,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.NavigationBar
@@ -2217,9 +2219,12 @@ fun PlayerScreen(
 
     val isPlaying by viewModel.isPlaying.collectAsState()
     val timerSeconds by viewModel.timerSecondsRemaining.collectAsState()
+    val context = LocalContext.current
     val headphonesConnected by viewModel.isHeadphoneConnected.collectAsState()
     val isDarkMode by viewModel.isDarkMode.collectAsState()
     val isPremiumUnlocked by viewModel.isPremium.collectAsState()
+    val isSchedulerUnlocked by viewModel.isSchedulerUnlockedTemporarily.collectAsState()
+    val isMixerUnlocked = isPremiumUnlocked || isSchedulerUnlocked
 
     val colors = rememberThemeColors(isDarkMode)
 
@@ -2232,17 +2237,11 @@ fun PlayerScreen(
     var showTimerSheet by remember { mutableStateOf(false) }
     var showVolumeDialog by remember { mutableStateOf(false) }
     var showBreathingDialog by remember { mutableStateOf(false) }
+    var showPaywallDialog by remember { mutableStateOf(false) }
 
     var showHeadphoneToast by remember { mutableStateOf(false) }
-    androidx.compose.runtime.LaunchedEffect(headphonesConnected) {
-        if (!headphonesConnected) {
-            showHeadphoneToast = true
-            kotlinx.coroutines.delay(4000)
-            showHeadphoneToast = false
-        } else {
-            showHeadphoneToast = false
-        }
-    }
+    val coroutineScope = rememberCoroutineScope()
+    var headphoneJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
 
     val activeBeatHz = remember(preset) {
         preset.steps.firstOrNull()?.beat_frequency_hz
@@ -2357,6 +2356,14 @@ fun PlayerScreen(
                     if (!isPlaying) {
                         viewModel.startPlayback(preset)
                         viewModel.setVolume(volume)
+                        if (!headphonesConnected) {
+                            headphoneJob?.cancel()
+                            headphoneJob = coroutineScope.launch {
+                                showHeadphoneToast = true
+                                kotlinx.coroutines.delay(4000)
+                                showHeadphoneToast = false
+                            }
+                        }
                     }
                     showBreathingDialog = true
                 },
@@ -2418,79 +2425,152 @@ fun PlayerScreen(
 
             // Collapsible Audio Mixer Panel
             var isMixerExpanded by remember { mutableStateOf(true) }
-            Card(
-                colors = CardDefaults.cardColors(containerColor = colors.card),
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .animateContentSize()
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.Center
             ) {
-                Column(
-                    modifier = Modifier.padding(14.dp)
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = colors.card),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .animateContentSize()
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { isMixerExpanded = !isMixerExpanded },
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                    Column(
+                        modifier = Modifier.padding(14.dp)
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { isMixerExpanded = !isMixerExpanded },
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.Tune,
+                                    contentDescription = null,
+                                    tint = categoryColor,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Audio Mixer & Layering",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp,
+                                    color = colors.text
+                                )
+                            }
+                            Icon(
+                                imageVector = if (isMixerExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                contentDescription = if (isMixerExpanded) "Collapse" else "Expand",
+                                tint = colors.textSecondary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        if (isMixerExpanded) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                MixerSliderRow(
+                                    label = "Binaural Beat",
+                                    value = volTone,
+                                    color = categoryColor,
+                                    colors = colors,
+                                    onValueChange = { viewModel.updateMixerLevels(it, volWhite, volPink, volBrown) }
+                                )
+                                MixerSliderRow(
+                                    label = "White Noise",
+                                    value = volWhite,
+                                    color = Color(0xFFE0E0E0),
+                                    colors = colors,
+                                    onValueChange = { viewModel.updateMixerLevels(volTone, it, volPink, volBrown) }
+                                )
+                                MixerSliderRow(
+                                    label = "Pink Noise",
+                                    value = volPink,
+                                    color = ColorAccentStudy,
+                                    colors = colors,
+                                    onValueChange = { viewModel.updateMixerLevels(volTone, volWhite, it, volBrown) }
+                                )
+                                MixerSliderRow(
+                                    label = "Brown Noise",
+                                    value = volBrown,
+                                    color = ColorAccentSpirit,
+                                    colors = colors,
+                                    onValueChange = { viewModel.updateMixerLevels(volTone, volWhite, volPink, it) }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // If locked, overlay a beautiful semi-transparent glassmorphic Locker Panel!
+                if (!isMixerUnlocked) {
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .background(colors.card.copy(alpha = 0.88f), shape = RoundedCornerShape(16.dp))
+                            .border(1.dp, colors.border, RoundedCornerShape(16.dp))
+                            .clickable(enabled = false) {}, // Intercept click events
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                            modifier = Modifier.padding(16.dp)
+                        ) {
                             Icon(
                                 imageVector = Icons.Default.Tune,
                                 contentDescription = null,
-                                tint = categoryColor,
-                                modifier = Modifier.size(20.dp)
+                                tint = categoryColor.copy(alpha = 0.5f),
+                                modifier = Modifier.size(36.dp)
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.height(6.dp))
                             Text(
-                                text = "Audio Mixer & Layering",
+                                text = "Advanced Audio Mixer",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp,
                                 color = colors.text
                             )
-                        }
-                        Icon(
-                            imageVector = if (isMixerExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                            contentDescription = if (isMixerExpanded) "Collapse" else "Expand",
-                            tint = colors.textSecondary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-
-                    if (isMixerExpanded) {
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            MixerSliderRow(
-                                label = "Binaural Beat",
-                                value = volTone,
-                                color = categoryColor,
-                                colors = colors,
-                                onValueChange = { viewModel.updateMixerLevels(it, volWhite, volPink, volBrown) }
+                            Text(
+                                text = "Layer White, Pink & Brown noises simultaneously.",
+                                fontSize = 11.sp,
+                                color = colors.textSecondary,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
                             )
-                            MixerSliderRow(
-                                label = "White Noise",
-                                value = volWhite,
-                                color = Color(0xFFE0E0E0),
-                                colors = colors,
-                                onValueChange = { viewModel.updateMixerLevels(volTone, it, volPink, volBrown) }
-                            )
-                            MixerSliderRow(
-                                label = "Pink Noise",
-                                value = volPink,
-                                color = ColorAccentStudy,
-                                colors = colors,
-                                onValueChange = { viewModel.updateMixerLevels(volTone, volWhite, it, volBrown) }
-                            )
-                            MixerSliderRow(
-                                label = "Brown Noise",
-                                value = volBrown,
-                                color = ColorAccentSpirit,
-                                colors = colors,
-                                onValueChange = { viewModel.updateMixerLevels(volTone, volWhite, volPink, it) }
-                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Button(
+                                    onClick = {
+                                        com.monliev.brainwave.audio.playback.AdMobManager.showRewardedAd(
+                                            activity = context as android.app.Activity,
+                                            onUserEarnedReward = { viewModel.unlockSchedulerTemporarily() },
+                                            onAdClosed = {}
+                                        )
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = categoryColor),
+                                    shape = RoundedCornerShape(10.dp),
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                    modifier = Modifier.height(34.dp)
+                                ) {
+                                    Text("Unlock Free (Watch Ad)", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                }
+                                OutlinedButton(
+                                    onClick = { showPaywallDialog = true },
+                                    border = BorderStroke(1.dp, colors.border),
+                                    shape = RoundedCornerShape(10.dp),
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                    modifier = Modifier.height(34.dp)
+                                ) {
+                                    Text("Go Premium", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = colors.text)
+                                }
+                            }
                         }
                     }
                 }
@@ -2533,6 +2613,14 @@ fun PlayerScreen(
                                 viewModel.startPlayback(preset)
                                 viewModel.setVolume(volume)
                                 viewModel.updateMixerLevels(volTone, volWhite, volPink, volBrown)
+                                if (!headphonesConnected) {
+                                    headphoneJob?.cancel()
+                                    headphoneJob = coroutineScope.launch {
+                                        showHeadphoneToast = true
+                                        kotlinx.coroutines.delay(4000)
+                                        showHeadphoneToast = false
+                                    }
+                                }
                             } else {
                                 viewModel.togglePlayPause()
                             }
@@ -2600,15 +2688,14 @@ fun PlayerScreen(
             }
         } // Column ends
 
-        // Floating Headphone Warning overlay
+        // Floating Headphone Warning overlay (Centered, fadeIn + fadeOut)
         AnimatedVisibility(
             visible = showHeadphoneToast,
-            enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
-            exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut(),
+            enter = fadeIn(),
+            exit = fadeOut(),
             modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = 16.dp)
-                .padding(horizontal = 24.dp)
+                .align(Alignment.Center)
+                .padding(horizontal = 32.dp)
         ) {
             Card(
                 colors = CardDefaults.cardColors(containerColor = colors.card),
@@ -2699,6 +2786,14 @@ fun PlayerScreen(
             onDismiss = { showBreathingDialog = false },
             categoryColor = categoryColor,
             colors = colors
+        )
+    }
+
+    if (showPaywallDialog) {
+        PaywallDialog(
+            onDismiss = { showPaywallDialog = false },
+            colors = colors,
+            viewModel = viewModel
         )
     }
 }
