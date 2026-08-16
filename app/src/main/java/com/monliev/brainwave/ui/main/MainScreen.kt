@@ -504,54 +504,60 @@ fun MainTabsScreen(
                             .fillMaxWidth()
                             .padding(bottom = 16.dp)
                     ) {
-                        Text(
-                            text = "Brainwave",
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Black,
-                            color = colors.text
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = "Brainwave",
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Black,
+                                color = colors.text
+                            )
+                            if (isPremiumUnlocked) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .background(ColorAccentSpirit.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Spa,
+                                        contentDescription = null,
+                                        tint = ColorAccentSpirit,
+                                        modifier = Modifier.size(10.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "Premium",
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = ColorAccentSpirit
+                                    )
+                                }
+                            } else {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .background(colors.border.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = "Free Version",
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = colors.textSecondary
+                                    )
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = "Version $versionName",
                             fontSize = 11.sp,
                             color = colors.textSecondary.copy(alpha = 0.8f)
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        if (isPremiumUnlocked) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier
-                                    .background(ColorAccentSpirit.copy(alpha = 0.15f), RoundedCornerShape(20.dp))
-                                    .padding(horizontal = 10.dp, vertical = 4.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Spa,
-                                    contentDescription = null,
-                                    tint = ColorAccentSpirit,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "Premium Active",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = ColorAccentSpirit
-                                )
-                            }
-                        } else {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier
-                                    .background(colors.border.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
-                                    .padding(horizontal = 10.dp, vertical = 4.dp)
-                            ) {
-                                Text(
-                                    text = "Free Version",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = colors.textSecondary
-                                )
-                            }
-                        }
                     }
 
                     HorizontalDivider(color = colors.border, thickness = 1.dp)
